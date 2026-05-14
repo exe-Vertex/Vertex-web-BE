@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4 d17.14
+VisualStudioVersion = 17.14.36811.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vertex-web-BE", "Vertex-web-BE\Vertex-web-BE.csproj", "{65E69096-6B14-433C-909E-555161C92200}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vertex.Entities", "Vertex.Entities\Vertex.Entities.csproj", "{E086A2D8-3386-46CD-9485-C35BE87CFC37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vertex.Repositories", "Vertex.Repositories\Vertex.Repositories.csproj", "{1C83A907-BBBF-4F52-8502-90978E6473D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vertex.Services", "Vertex.Services\Vertex.Services.csproj", "{18E98FDC-C98D-41F9-AA33-DC08D9BAFA6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{65E69096-6B14-433C-909E-555161C92200}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65E69096-6B14-433C-909E-555161C92200}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65E69096-6B14-433C-909E-555161C92200}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E086A2D8-3386-46CD-9485-C35BE87CFC37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E086A2D8-3386-46CD-9485-C35BE87CFC37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E086A2D8-3386-46CD-9485-C35BE87CFC37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E086A2D8-3386-46CD-9485-C35BE87CFC37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C83A907-BBBF-4F52-8502-90978E6473D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C83A907-BBBF-4F52-8502-90978E6473D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C83A907-BBBF-4F52-8502-90978E6473D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C83A907-BBBF-4F52-8502-90978E6473D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18E98FDC-C98D-41F9-AA33-DC08D9BAFA6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18E98FDC-C98D-41F9-AA33-DC08D9BAFA6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18E98FDC-C98D-41F9-AA33-DC08D9BAFA6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18E98FDC-C98D-41F9-AA33-DC08D9BAFA6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
