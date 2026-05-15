@@ -1,0 +1,26 @@
+using System;
+using System.Collections.Generic;
+
+namespace Vertex.Entities.Users
+{
+    public class User
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+        public string Role { get; set; } = "student";
+        public string Plan { get; set; } = "free";
+        public string Status { get; set; } = "active";
+        public string Title { get; set; } = string.Empty;
+        public string Bio { get; set; } = string.Empty;
+        public string Availability { get; set; } = "available";
+        public int AiQuota { get; set; } = 20;
+        public int AiUsed { get; set; } = 0;
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
+
+        public ICollection<Auth.RefreshToken> RefreshTokens { get; set; } = new List<Auth.RefreshToken>();
+    }
+}
