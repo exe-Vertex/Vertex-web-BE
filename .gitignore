@@ -45,6 +45,7 @@ Generated\ Files/
 
 # Visual Studio project system cache
 *.csproj.ls
+*.csproj.lscache
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
