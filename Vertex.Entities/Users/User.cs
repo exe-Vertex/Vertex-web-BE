@@ -10,8 +10,7 @@ namespace Vertex.Entities.Users
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public string AvatarUrl { get; set; } = string.Empty;
-        public string Role { get; set; } = "student";
-        public string Plan { get; set; } = "free";
+        public string Role { get; set; } = "member"; // member | lecturer | admin (system-level)
         public string Status { get; set; } = "active";
         public string Title { get; set; } = string.Empty;
         public string Bio { get; set; } = string.Empty;
@@ -22,5 +21,6 @@ namespace Vertex.Entities.Users
         public DateTimeOffset UpdatedAt { get; set; }
 
         public ICollection<Auth.RefreshToken> RefreshTokens { get; set; } = new List<Auth.RefreshToken>();
+        public ICollection<Organizations.OrganizationMember> OrganizationMemberships { get; set; } = new List<Organizations.OrganizationMember>();
     }
 }
