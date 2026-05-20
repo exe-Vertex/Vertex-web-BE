@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Vertex.Entities.Auth;
 using Vertex.Entities.Organizations;
+using Vertex.Entities.Projects;
 using Vertex.Entities.Users;
 
 namespace Vertex.Repositories
@@ -15,6 +16,9 @@ namespace Vertex.Repositories
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<Organization> Organizations => Set<Organization>();
         public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
+        public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -101,6 +105,76 @@ namespace Vertex.Repositories
                     .WithMany(x => x.OrganizationMemberships)
                     .HasForeignKey(x => x.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ── Projects ────────────────────────────────────
+            modelBuilder.Entity<Project>(entity =>
+            {
+                entity.ToTable("projects");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.OrgId).HasColumnName("org_id");
+                entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(200);
+                entity.Property(x => x.Description).HasColumnName("description");
+                entity.Property(x => x.Deadline).HasColumnName("deadline");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(x => x.OrgId);
+            });
+
+            modelBuilder.Entity<ProjectMember>(entity =>
+            {
+                entity.ToTable("project_members");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.ProjectId).HasColumnName("project_id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.Role).HasColumnName("role").HasMaxLength(20);
+                entity.Property(x => x.JoinedAt).HasColumnName("joined_at");
+
+                entity.HasIndex(x => new { x.ProjectId, x.UserId }).IsUnique();
+
+                entity.HasOne(x => x.Project)
+                    .WithMany(x => x.Members)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ProjectTask>(entity =>
+            {
+                entity.ToTable("tasks");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.ProjectId).HasColumnName("project_id");
+                entity.Property(x => x.Title).HasColumnName("title").HasMaxLength(300);
+                entity.Property(x => x.Description).HasColumnName("description");
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30);
+                entity.Property(x => x.Priority).HasColumnName("priority").HasMaxLength(10);
+                entity.Property(x => x.AssigneeId).HasColumnName("assignee_id");
+                entity.Property(x => x.StartDate).HasColumnName("start_date");
+                entity.Property(x => x.EndDate).HasColumnName("end_date");
+                entity.Property(x => x.Position).HasColumnName("position");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(x => new { x.ProjectId, x.Status });
+                entity.HasIndex(x => x.AssigneeId);
+
+                entity.HasOne(x => x.Project)
+                    .WithMany(x => x.Tasks)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Assignee)
+                    .WithMany()
+                    .HasForeignKey(x => x.AssigneeId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }
