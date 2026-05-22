@@ -16,6 +16,7 @@ namespace Vertex.Entities.Projects
         // Navigation
         public List<ProjectTask> Tasks { get; set; } = new();
         public List<ProjectMember> Members { get; set; } = new();
+        public List<ProjectFile> Files { get; set; } = new();
     }
 
     public class ProjectMember
@@ -49,5 +50,7 @@ namespace Vertex.Entities.Projects
         // Navigation
         public Project? Project { get; set; }
         public Users.User? Assignee { get; set; }
+        public List<Subtask> Subtasks { get; set; } = new();
+        public List<TaskComment> Comments { get; set; } = new();
     }
 }

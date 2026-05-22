@@ -20,7 +20,12 @@ namespace Vertex.Entities.Users
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset UpdatedAt { get; set; }
 
+        // Navigation
         public ICollection<Auth.RefreshToken> RefreshTokens { get; set; } = new List<Auth.RefreshToken>();
         public ICollection<Organizations.OrganizationMember> OrganizationMemberships { get; set; } = new List<Organizations.OrganizationMember>();
+        public ICollection<UserSkill> Skills { get; set; } = new List<UserSkill>();
+        public ICollection<Workspaces.WorkspaceMember> WorkspaceMemberships { get; set; } = new List<Workspaces.WorkspaceMember>();
+        public ICollection<Notifications.Notification> Notifications { get; set; } = new List<Notifications.Notification>();
+        public ICollection<AI.AiHistory> AiHistories { get; set; } = new List<AI.AiHistory>();
     }
 }
