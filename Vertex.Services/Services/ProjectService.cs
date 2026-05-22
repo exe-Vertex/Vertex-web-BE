@@ -40,7 +40,7 @@ namespace Vertex.Services.Services
                 OrgId = orgId,
                 Name = input.Name.Trim(),
                 Description = input.Description?.Trim(),
-                Deadline = input.Deadline,
+                Deadline = DateTime.SpecifyKind(input.Deadline, DateTimeKind.Utc),
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -93,7 +93,7 @@ namespace Vertex.Services.Services
 
             if (input.Name != null) project.Name = input.Name.Trim();
             if (input.Description != null) project.Description = input.Description.Trim();
-            if (input.Deadline.HasValue) project.Deadline = input.Deadline.Value;
+            if (input.Deadline.HasValue) project.Deadline = DateTime.SpecifyKind(input.Deadline.Value, DateTimeKind.Utc);
             project.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _projectRepo.UpdateAsync(project);
@@ -125,8 +125,8 @@ namespace Vertex.Services.Services
                 Status = input.Status,
                 Priority = input.Priority,
                 AssigneeId = input.AssigneeId == Guid.Empty ? null : input.AssigneeId,
-                StartDate = input.StartDate,
-                EndDate = input.EndDate,
+                StartDate = DateTime.SpecifyKind(input.StartDate, DateTimeKind.Utc),
+                EndDate = DateTime.SpecifyKind(input.EndDate, DateTimeKind.Utc),
                 Position = position,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -149,8 +149,8 @@ namespace Vertex.Services.Services
             if (input.Status != null) task.Status = input.Status;
             if (input.Priority != null) task.Priority = input.Priority;
             if (input.AssigneeId.HasValue) task.AssigneeId = input.AssigneeId.Value == Guid.Empty ? null : input.AssigneeId;
-            if (input.StartDate.HasValue) task.StartDate = input.StartDate.Value;
-            if (input.EndDate.HasValue) task.EndDate = input.EndDate.Value;
+            if (input.StartDate.HasValue) task.StartDate = DateTime.SpecifyKind(input.StartDate.Value, DateTimeKind.Utc);
+            if (input.EndDate.HasValue) task.EndDate = DateTime.SpecifyKind(input.EndDate.Value, DateTimeKind.Utc);
             if (input.Position.HasValue) task.Position = input.Position.Value;
             task.UpdatedAt = DateTimeOffset.UtcNow;
 
