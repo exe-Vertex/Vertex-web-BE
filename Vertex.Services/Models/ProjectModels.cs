@@ -16,7 +16,8 @@ namespace Vertex.Services.Models
         string Priority,
         Guid? AssigneeId,
         DateTime StartDate,
-        DateTime EndDate
+        DateTime EndDate,
+        string? SubmissionLink
     );
 
     public record UpdateTaskInput(
@@ -27,8 +28,13 @@ namespace Vertex.Services.Models
         Guid? AssigneeId,
         DateTime? StartDate,
         DateTime? EndDate,
-        int? Position
+        int? Position,
+        string? SubmissionLink
     );
+
+    public record AddProjectMemberInput(string EmailOrUserId, string Role);
+
+    public record UpdateProjectMemberInput(string Role);
 
     // ── Outputs ─────────────────────────────────────────
 
@@ -51,6 +57,7 @@ namespace Vertex.Services.Models
         DateTime StartDate,
         DateTime EndDate,
         int Position,
+        string? SubmissionLink,
         DateTimeOffset CreatedAt
     );
 
@@ -74,5 +81,46 @@ namespace Vertex.Services.Models
         DateTimeOffset CreatedAt,
         List<TaskDto> Tasks,
         List<ProjectMemberDto> Members
+    );
+
+    public record ProjectFileDto(
+        Guid Id,
+        Guid ProjectId,
+        string FileName,
+        string FileUrl,
+        long Size,
+        string? MimeType,
+        Guid UploadedById,
+        string UploadedBy,
+        DateTimeOffset UploadedAt,
+        string SizeLabel
+    );
+
+    public record CreateProjectLinkInput(string Url, string? Title);
+
+    public record ProjectLinkDto(
+        Guid Id,
+        Guid ProjectId,
+        string Url,
+        string Title,
+        Guid? UploadedById,
+        string UploadedBy,
+        DateTimeOffset UploadedAt
+    );
+
+    public record CreateTaskLinkInput(string Url, string? Title);
+
+    public record TaskAttachmentDto(
+        Guid Id,
+        Guid TaskId,
+        string Type,
+        string? Url,
+        string? Title,
+        long? Size,
+        string? SizeLabel,
+        string? MimeType,
+        Guid? UploadedById,
+        string UploadedBy,
+        DateTimeOffset UploadedAt
     );
 }

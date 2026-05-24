@@ -25,6 +25,7 @@ namespace Vertex.Repositories.Interfaces
         // Members
         Task<ProjectMember?> GetMemberAsync(Guid projectId, Guid userId);
         Task AddMemberAsync(ProjectMember member);
+        Task UpdateMemberAsync(ProjectMember member);
         Task RemoveMemberAsync(ProjectMember member);
     }
 }

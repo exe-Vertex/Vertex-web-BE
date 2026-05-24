@@ -12,6 +12,8 @@ namespace Vertex.Services.Services
     public class ProjectService : IProjectService
     {
         private readonly IProjectRepository _projectRepo;
+        private readonly IUserRepository _userRepo;
+        private readonly IOrganizationRepository _orgRepo;
 
         private static readonly Dictionary<string, int> StatusWeight = new()
         {
@@ -21,9 +23,11 @@ namespace Vertex.Services.Services
             ["done"] = 100,
         };
 
-        public ProjectService(IProjectRepository projectRepo)
+        public ProjectService(IProjectRepository projectRepo, IUserRepository userRepo, IOrganizationRepository orgRepo)
         {
             _projectRepo = projectRepo;
+            _userRepo = userRepo;
+            _orgRepo = orgRepo;
         }
 
         // ── Projects ───────────────────────────────────────
@@ -40,7 +44,7 @@ namespace Vertex.Services.Services
                 OrgId = orgId,
                 Name = input.Name.Trim(),
                 Description = input.Description?.Trim(),
-                Deadline = input.Deadline,
+                Deadline = input.Deadline.ToUniversalTime(),
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -93,7 +97,7 @@ namespace Vertex.Services.Services
 
             if (input.Name != null) project.Name = input.Name.Trim();
             if (input.Description != null) project.Description = input.Description.Trim();
-            if (input.Deadline.HasValue) project.Deadline = input.Deadline.Value;
+            if (input.Deadline.HasValue) project.Deadline = input.Deadline.Value.ToUniversalTime();
             project.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _projectRepo.UpdateAsync(project);
@@ -125,9 +129,10 @@ namespace Vertex.Services.Services
                 Status = input.Status,
                 Priority = input.Priority,
                 AssigneeId = input.AssigneeId == Guid.Empty ? null : input.AssigneeId,
-                StartDate = input.StartDate,
-                EndDate = input.EndDate,
+                StartDate = input.StartDate.ToUniversalTime(),
+                EndDate = input.EndDate.ToUniversalTime(),
                 Position = position,
+                SubmissionLink = input.SubmissionLink?.Trim(),
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -149,9 +154,10 @@ namespace Vertex.Services.Services
             if (input.Status != null) task.Status = input.Status;
             if (input.Priority != null) task.Priority = input.Priority;
             if (input.AssigneeId.HasValue) task.AssigneeId = input.AssigneeId.Value == Guid.Empty ? null : input.AssigneeId;
-            if (input.StartDate.HasValue) task.StartDate = input.StartDate.Value;
-            if (input.EndDate.HasValue) task.EndDate = input.EndDate.Value;
+            if (input.StartDate.HasValue) task.StartDate = input.StartDate.Value.ToUniversalTime();
+            if (input.EndDate.HasValue) task.EndDate = input.EndDate.Value.ToUniversalTime();
             if (input.Position.HasValue) task.Position = input.Position.Value;
+            if (input.SubmissionLink != null) task.SubmissionLink = input.SubmissionLink.Trim();
             task.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _projectRepo.UpdateTaskAsync(task);
@@ -165,6 +171,86 @@ namespace Vertex.Services.Services
             var task = await _projectRepo.GetTaskByIdAsync(taskId);
             if (task == null) throw new InvalidOperationException("Task not found.");
             await _projectRepo.DeleteTaskAsync(task);
+        }
+
+        // ── Members ────────────────────────────────────────
+
+        public async Task<List<ProjectMemberDto>> ListProjectMembersAsync(Guid projectId)
+        {
+            var project = await _projectRepo.GetByIdWithDetailsAsync(projectId);
+            if (project == null) throw new InvalidOperationException("Project not found.");
+
+            return project.Members.Select(MapMember).ToList();
+        }
+
+        public async Task<ProjectMemberDto> AddProjectMemberAsync(Guid orgId, Guid projectId, AddProjectMemberInput input)
+        {
+            var project = await _projectRepo.GetByIdAsync(projectId);
+            if (project == null) throw new InvalidOperationException("Project not found.");
+
+            Entities.Users.User? user = null;
+            if (Guid.TryParse(input.EmailOrUserId, out var userId))
+            {
+                user = await _userRepo.GetByIdAsync(userId);
+            }
+            else
+            {
+                user = await _userRepo.GetByEmailAsync(input.EmailOrUserId);
+            }
+
+            if (user == null) throw new InvalidOperationException("User not found.");
+
+            var orgMember = await _orgRepo.GetMemberAsync(orgId, user.Id);
+            if (orgMember == null) throw new InvalidOperationException("User is not a member of the organization.");
+
+            var existingMember = await _projectRepo.GetMemberAsync(projectId, user.Id);
+            if (existingMember != null) throw new InvalidOperationException("User is already a member of this project.");
+
+            var newMember = new ProjectMember
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                UserId = user.Id,
+                Role = input.Role,
+                JoinedAt = DateTimeOffset.UtcNow,
+            };
+
+            await _projectRepo.AddMemberAsync(newMember);
+
+            // Fetch to get User populated
+            var savedMember = await _projectRepo.GetMemberAsync(projectId, user.Id);
+            return MapMember(savedMember!);
+        }
+
+        public async Task<ProjectMemberDto> UpdateProjectMemberRoleAsync(Guid projectId, Guid memberId, UpdateProjectMemberInput input)
+        {
+            var member = await _projectRepo.GetMemberAsync(projectId, memberId);
+            if (member == null) throw new InvalidOperationException("Member not found in the project.");
+
+            member.Role = input.Role;
+            await _projectRepo.UpdateMemberAsync(member);
+
+            return MapMember(member);
+        }
+
+        public async Task RemoveProjectMemberAsync(Guid projectId, Guid memberId)
+        {
+            var project = await _projectRepo.GetByIdWithDetailsAsync(projectId);
+            if (project == null) throw new InvalidOperationException("Project not found.");
+
+            var member = await _projectRepo.GetMemberAsync(projectId, memberId);
+            if (member == null) throw new InvalidOperationException("Member not found in the project.");
+
+            if (member.Role == "Leader")
+            {
+                var leaderCount = project.Members.Count(m => m.Role == "Leader");
+                if (leaderCount <= 1)
+                {
+                    throw new InvalidOperationException("Cannot remove the last Leader of the project.");
+                }
+            }
+
+            await _projectRepo.RemoveMemberAsync(member);
         }
 
         // ── Helpers ────────────────────────────────────────
@@ -182,7 +268,7 @@ namespace Vertex.Services.Services
             t.Assignee != null
                 ? new ProjectMemberDto(Guid.Empty, t.Assignee.Id, t.Assignee.Name, t.Assignee.Email, t.Assignee.AvatarUrl, "")
                 : null,
-            t.StartDate, t.EndDate, t.Position, t.CreatedAt
+            t.StartDate, t.EndDate, t.Position, t.SubmissionLink, t.CreatedAt
         );
 
         private static ProjectMemberDto MapMember(ProjectMember m) => new(
