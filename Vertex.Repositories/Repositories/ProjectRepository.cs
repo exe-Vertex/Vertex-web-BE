@@ -79,7 +79,6 @@ namespace Vertex.Repositories.Repositories
 
         public async Task UpdateTaskAsync(ProjectTask task)
         {
-            _db.ProjectTasks.Update(task);
             await _db.SaveChangesAsync();
         }
 
@@ -110,6 +109,12 @@ namespace Vertex.Repositories.Repositories
         public async Task AddMemberAsync(ProjectMember member)
         {
             _db.ProjectMembers.Add(member);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task UpdateMemberAsync(ProjectMember member)
+        {
+            _db.ProjectMembers.Update(member);
             await _db.SaveChangesAsync();
         }
 
