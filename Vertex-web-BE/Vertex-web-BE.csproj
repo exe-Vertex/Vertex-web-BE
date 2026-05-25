@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vertex_web_BE</RootNamespace>
+    <UserSecretsId>358df526-b6dd-4fec-97eb-a992b702e2c8</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
