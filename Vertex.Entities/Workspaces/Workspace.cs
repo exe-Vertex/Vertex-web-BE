@@ -10,9 +10,10 @@ namespace Vertex.Entities.Workspaces
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public Guid OwnerId { get; set; }
-        public Guid? OrgId { get; set; }
+        public Guid? OrgId { get; set; } // nullable for personal workspaces
         public DateTimeOffset CreatedAt { get; set; }
 
+        // Navigation
         public User Owner { get; set; } = null!;
         public Organization? Organization { get; set; }
         public ICollection<WorkspaceMember> Members { get; set; } = new List<WorkspaceMember>();

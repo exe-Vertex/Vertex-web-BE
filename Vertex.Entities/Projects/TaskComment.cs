@@ -11,6 +11,7 @@ namespace Vertex.Entities.Projects
         public string Content { get; set; } = string.Empty;
         public DateTimeOffset CreatedAt { get; set; }
 
+        // Navigation
         public ProjectTask Task { get; set; } = null!;
         public User User { get; set; } = null!;
     }

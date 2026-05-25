@@ -12,6 +12,7 @@ namespace Vertex.Entities.Notifications
         public bool IsRead { get; set; } = false;
         public DateTimeOffset CreatedAt { get; set; }
 
+        // Navigation
         public User User { get; set; } = null!;
     }
 }

@@ -14,15 +14,18 @@ namespace Vertex.Services.Services
         private readonly IUserRepository _userRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly ITokenService _tokenService;
+        private readonly IOrganizationService _orgService;
 
         public AuthService(
             IUserRepository userRepository,
             IRefreshTokenRepository refreshTokenRepository,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            IOrganizationService orgService)
         {
             _userRepository = userRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _tokenService = tokenService;
+            _orgService = orgService;
         }
 
         public async Task<AuthTokens> RegisterAsync(RegisterInput input)
@@ -45,6 +48,10 @@ namespace Vertex.Services.Services
             };
 
             await _userRepository.AddAsync(user);
+
+            // Auto-create a default organization for the new user
+            var orgSlug = user.Name.ToLower().Trim().Replace(" ", "-") + "-workspace";
+            await _orgService.CreateOrgAsync(user.Id, new CreateOrgInput($"{user.Name}'s Workspace", orgSlug));
 
             var result = _tokenService.GenerateTokens(user);
             await SaveRefreshTokenAsync(user.Id, result.Tokens, result.RefreshTokenHash);

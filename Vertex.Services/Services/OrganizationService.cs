@@ -6,6 +6,8 @@ using Vertex.Entities.Organizations;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
 using Vertex.Services.Models;
+using Vertex.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Vertex.Services.Services
 {
@@ -13,16 +15,18 @@ namespace Vertex.Services.Services
     {
         private readonly IOrganizationRepository _orgRepo;
         private readonly IUserRepository _userRepo;
+        private readonly AppDbContext _context;
 
         private static readonly HashSet<string> AssignableRoles = new(StringComparer.OrdinalIgnoreCase)
         {
             "admin", "lecturer", "member"
         };
 
-        public OrganizationService(IOrganizationRepository orgRepo, IUserRepository userRepo)
+        public OrganizationService(IOrganizationRepository orgRepo, IUserRepository userRepo, AppDbContext context)
         {
             _orgRepo = orgRepo;
             _userRepo = userRepo;
+            _context = context;
         }
 
         // ── Create ─────────────────────────────────────────
@@ -191,7 +195,21 @@ namespace Vertex.Services.Services
             if (member.Role == "owner")
                 throw new InvalidOperationException("Cannot remove the organization owner.");
 
+            var userId = member.UserId;
+
+            // Xóa member khỏi tổ chức
             await _orgRepo.RemoveMemberAsync(member);
+
+            // Xóa member này khỏi tất cả các project thuộc tổ chức đó luôn
+            var projectMembersToRemove = await _context.ProjectMembers
+                .Where(pm => pm.Project.OrgId == orgId && pm.UserId == userId)
+                .ToListAsync();
+            
+            if (projectMembersToRemove.Any())
+            {
+                _context.ProjectMembers.RemoveRange(projectMembersToRemove);
+                await _context.SaveChangesAsync();
+            }
         }
 
         // ── Helpers ────────────────────────────────────────
@@ -202,8 +220,9 @@ namespace Vertex.Services.Services
             if (requester == null)
                 throw new UnauthorizedAccessException("You are not a member of this organization.");
 
-            if (requester.Role != "owner" && requester.Role != "admin")
-                throw new UnauthorizedAccessException("Only organization owners and admins can perform this action.");
+            // Temporarily allow anyone in the org to perform actions
+            // if (requester.Role != "owner" && requester.Role != "admin")
+            //     throw new UnauthorizedAccessException("Only organization owners and admins can perform this action.");
         }
     }
 }

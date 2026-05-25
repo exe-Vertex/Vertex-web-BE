@@ -11,6 +11,7 @@ namespace Vertex.Entities.Workspaces
         public string Role { get; set; } = "member";
         public DateTimeOffset JoinedAt { get; set; }
 
+        // Navigation
         public Workspace Workspace { get; set; } = null!;
         public User User { get; set; } = null!;
     }
