@@ -51,7 +51,7 @@ namespace Vertex.Services.Services
                     var todo = tasks.Count(t => t.Status == "todo");
 
                     var progress = total > 0 ? (int)Math.Round((double)approved / total * 100) : 0;
-                    var reviewStatus = ComputeReviewStatus(project.Deadline, progress, tasks.Any(t => t.Status == "ready-for-review"));
+                    var reviewStatus = ComputeReviewStatus(DateOnly.FromDateTime(project.Deadline), progress, tasks.Any(t => t.Status == "ready-for-review"));
 
                     var initials = members
                         .Where(m => m.User != null)
@@ -63,7 +63,7 @@ namespace Vertex.Services.Services
                         project.Name,
                         project.Description,
                         org.Name,
-                        project.Deadline,
+                        DateOnly.FromDateTime(project.Deadline),
                         members.Count,
                         initials,
                         progress,
@@ -112,8 +112,8 @@ namespace Vertex.Services.Services
                 t.Status,
                 t.Priority,
                 t.Assignee?.Name,
-                t.StartDate,
-                t.EndDate
+                DateOnly.FromDateTime(t.StartDate),
+                DateOnly.FromDateTime(t.EndDate)
             )).ToList();
 
             // Build contribution data
@@ -122,7 +122,7 @@ namespace Vertex.Services.Services
             var total = tasks.Count;
             var approved = tasks.Count(t => t.Status == "done" || t.Status == "approved");
             var progress = total > 0 ? (int)Math.Round((double)approved / total * 100) : 0;
-            var reviewStatus = ComputeReviewStatus(project.Deadline, progress, tasks.Any(t => t.Status == "ready-for-review"));
+            var reviewStatus = ComputeReviewStatus(DateOnly.FromDateTime(project.Deadline), progress, tasks.Any(t => t.Status == "ready-for-review"));
 
             var memberNames = members
                 .Where(m => m.User != null)
@@ -136,7 +136,7 @@ namespace Vertex.Services.Services
                 project.Name,
                 project.Description,
                 orgName,
-                project.Deadline,
+                DateOnly.FromDateTime(project.Deadline),
                 members.Count,
                 memberNames,
                 progress,
