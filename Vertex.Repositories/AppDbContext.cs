@@ -203,11 +203,16 @@ namespace Vertex.Repositories
                 entity.Property(x => x.OrgId).HasColumnName("org_id");
                 entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(200);
                 entity.Property(x => x.Description).HasColumnName("description");
-                entity.Property(x => x.Deadline).HasColumnName("deadline");
+                entity.Property(x => x.Deadline).HasColumnName("deadline").HasColumnType("date");
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
                 entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(x => x.OrgId);
+
+                entity.HasOne(x => x.Organization)
+                    .WithMany()
+                    .HasForeignKey(x => x.OrgId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ── 9. Project Members ────────────────────────────
@@ -246,8 +251,8 @@ namespace Vertex.Repositories
                 entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30);
                 entity.Property(x => x.Priority).HasColumnName("priority").HasMaxLength(10);
                 entity.Property(x => x.AssigneeId).HasColumnName("assignee_id");
-                entity.Property(x => x.StartDate).HasColumnName("start_date");
-                entity.Property(x => x.EndDate).HasColumnName("end_date");
+                entity.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date");
+                entity.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date");
                 entity.Property(x => x.Position).HasColumnName("position");
                 entity.Property(x => x.SubmissionLink).HasColumnName("submission_link").HasMaxLength(2000);
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
