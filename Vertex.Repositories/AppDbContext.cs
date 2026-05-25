@@ -37,6 +37,7 @@ namespace Vertex.Repositories
         public DbSet<AiHistory> AiHistories => Set<AiHistory>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<Invitation> Invitations => Set<Invitation>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -480,6 +481,26 @@ namespace Vertex.Repositories
                     .WithMany()
                     .HasForeignKey(x => x.UploadedBy)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── 20. Invitations ──────────────────────────────────────
+            modelBuilder.Entity<Invitation>(entity =>
+            {
+                entity.ToTable("invitations");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(255);
+                entity.Property(x => x.TargetType).HasColumnName("target_type").HasMaxLength(20);
+                entity.Property(x => x.TargetId).HasColumnName("target_id");
+                entity.Property(x => x.Role).HasColumnName("role").HasMaxLength(20);
+                entity.Property(x => x.Token).HasColumnName("token").HasMaxLength(100);
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20);
+                entity.Property(x => x.CreatedBy).HasColumnName("created_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.ExpiredAt).HasColumnName("expired_at");
+
+                entity.HasIndex(x => x.Token).IsUnique();
+                entity.HasIndex(x => new { x.Email, x.TargetId, x.Status });
             });
         }
     }

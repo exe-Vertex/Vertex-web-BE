@@ -14,6 +14,7 @@ namespace Vertex.Services.Services
         private readonly IProjectRepository _projectRepo;
         private readonly IUserRepository _userRepo;
         private readonly IOrganizationRepository _orgRepo;
+        private readonly ITaskNotifier _taskNotifier;
 
         private static readonly Dictionary<string, int> StatusWeight = new()
         {
@@ -23,11 +24,12 @@ namespace Vertex.Services.Services
             ["done"] = 100,
         };
 
-        public ProjectService(IProjectRepository projectRepo, IUserRepository userRepo, IOrganizationRepository orgRepo)
+        public ProjectService(IProjectRepository projectRepo, IUserRepository userRepo, IOrganizationRepository orgRepo, ITaskNotifier taskNotifier)
         {
             _projectRepo = projectRepo;
             _userRepo = userRepo;
             _orgRepo = orgRepo;
+            _taskNotifier = taskNotifier;
         }
 
         // ── Projects ───────────────────────────────────────
@@ -141,7 +143,11 @@ namespace Vertex.Services.Services
 
             // Re-fetch with Assignee navigation
             var saved = await _projectRepo.GetTaskByIdAsync(task.Id);
-            return MapTask(saved!);
+            var resultDto = MapTask(saved!);
+            
+            await _taskNotifier.NotifyTaskCreatedAsync(projectId, resultDto);
+            
+            return resultDto;
         }
 
         public async Task<TaskDto> UpdateTaskAsync(Guid taskId, UpdateTaskInput input)
@@ -163,14 +169,22 @@ namespace Vertex.Services.Services
             await _projectRepo.UpdateTaskAsync(task);
 
             var updated = await _projectRepo.GetTaskByIdAsync(task.Id);
-            return MapTask(updated!);
+            var resultDto = MapTask(updated!);
+            
+            await _taskNotifier.NotifyTaskUpdatedAsync(task.ProjectId, resultDto);
+            
+            return resultDto;
         }
 
         public async Task DeleteTaskAsync(Guid taskId)
         {
             var task = await _projectRepo.GetTaskByIdAsync(taskId);
             if (task == null) throw new InvalidOperationException("Task not found.");
+            
+            var projectId = task.ProjectId;
             await _projectRepo.DeleteTaskAsync(task);
+            
+            await _taskNotifier.NotifyTaskDeletedAsync(projectId, taskId);
         }
 
         // ── Members ────────────────────────────────────────
