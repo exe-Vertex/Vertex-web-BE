@@ -1,4 +1,5 @@
 using System;
+using Vertex.Entities.Users;
 
 namespace Vertex.Entities.Projects
 {
@@ -12,6 +13,6 @@ namespace Vertex.Entities.Projects
 
         // Navigation
         public ProjectTask Task { get; set; } = null!;
-        public Users.User User { get; set; } = null!;
+        public User User { get; set; } = null!;
     }
 }

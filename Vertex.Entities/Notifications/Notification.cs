@@ -1,4 +1,5 @@
 using System;
+using Vertex.Entities.Users;
 
 namespace Vertex.Entities.Notifications
 {
@@ -12,6 +13,6 @@ namespace Vertex.Entities.Notifications
         public DateTimeOffset CreatedAt { get; set; }
 
         // Navigation
-        public Users.User User { get; set; } = null!;
+        public User User { get; set; } = null!;
     }
 }

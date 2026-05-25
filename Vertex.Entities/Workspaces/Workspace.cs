@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Vertex.Entities.Organizations;
+using Vertex.Entities.Users;
 
 namespace Vertex.Entities.Workspaces
 {
@@ -12,8 +14,8 @@ namespace Vertex.Entities.Workspaces
         public DateTimeOffset CreatedAt { get; set; }
 
         // Navigation
-        public Users.User Owner { get; set; } = null!;
-        public Organizations.Organization? Organization { get; set; }
+        public User Owner { get; set; } = null!;
+        public Organization? Organization { get; set; }
         public ICollection<WorkspaceMember> Members { get; set; } = new List<WorkspaceMember>();
     }
 }

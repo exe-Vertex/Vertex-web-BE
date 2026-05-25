@@ -1,4 +1,5 @@
 using System;
+using Vertex.Entities.Users;
 
 namespace Vertex.Entities.Workspaces
 {
@@ -12,6 +13,6 @@ namespace Vertex.Entities.Workspaces
 
         // Navigation
         public Workspace Workspace { get; set; } = null!;
-        public Users.User User { get; set; } = null!;
+        public User User { get; set; } = null!;
     }
 }

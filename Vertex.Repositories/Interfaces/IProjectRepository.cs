@@ -27,5 +27,11 @@ namespace Vertex.Repositories.Interfaces
         Task AddMemberAsync(ProjectMember member);
         Task UpdateMemberAsync(ProjectMember member);
         Task RemoveMemberAsync(ProjectMember member);
+
+        // Lecturer extensions
+        Task<List<ProjectMember>> GetMembersByProjectIdAsync(Guid projectId);
+        Task<List<ProjectTask>> GetTasksByProjectIdAsync(Guid projectId);
+        Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId);
+        Task AddCommentAsync(TaskComment comment);
     }
 }
