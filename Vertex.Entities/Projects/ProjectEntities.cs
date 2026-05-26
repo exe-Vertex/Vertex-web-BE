@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Vertex.Entities.Organizations;
 
 namespace Vertex.Entities.Projects
 {
@@ -14,9 +15,11 @@ namespace Vertex.Entities.Projects
         public DateTimeOffset UpdatedAt { get; set; }
 
         // Navigation
+        public Organization? Organization { get; set; }
         public List<ProjectTask> Tasks { get; set; } = new();
         public List<ProjectMember> Members { get; set; } = new();
         public List<ProjectFile> Files { get; set; } = new();
+        public List<ProjectLink> Links { get; set; } = new();
     }
 
     public class ProjectMember
@@ -44,6 +47,7 @@ namespace Vertex.Entities.Projects
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int Position { get; set; }
+        public string? SubmissionLink { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset UpdatedAt { get; set; }
 

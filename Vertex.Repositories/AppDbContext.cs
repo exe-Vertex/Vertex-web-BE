@@ -32,9 +32,12 @@ namespace Vertex.Repositories
         public DbSet<Subtask> Subtasks => Set<Subtask>();
         public DbSet<TaskComment> TaskComments => Set<TaskComment>();
         public DbSet<ProjectFile> ProjectFiles => Set<ProjectFile>();
+        public DbSet<ProjectLink> ProjectLinks => Set<ProjectLink>();
+        public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
         public DbSet<AiHistory> AiHistories => Set<AiHistory>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<Invitation> Invitations => Set<Invitation>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -200,11 +203,16 @@ namespace Vertex.Repositories
                 entity.Property(x => x.OrgId).HasColumnName("org_id");
                 entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(200);
                 entity.Property(x => x.Description).HasColumnName("description");
-                entity.Property(x => x.Deadline).HasColumnName("deadline");
+                entity.Property(x => x.Deadline).HasColumnName("deadline").HasColumnType("date");
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
                 entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(x => x.OrgId);
+
+                entity.HasOne(x => x.Organization)
+                    .WithMany()
+                    .HasForeignKey(x => x.OrgId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ── 9. Project Members ────────────────────────────
@@ -243,9 +251,10 @@ namespace Vertex.Repositories
                 entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30);
                 entity.Property(x => x.Priority).HasColumnName("priority").HasMaxLength(10);
                 entity.Property(x => x.AssigneeId).HasColumnName("assignee_id");
-                entity.Property(x => x.StartDate).HasColumnName("start_date");
-                entity.Property(x => x.EndDate).HasColumnName("end_date");
+                entity.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date");
+                entity.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date");
                 entity.Property(x => x.Position).HasColumnName("position");
+                entity.Property(x => x.SubmissionLink).HasColumnName("submission_link").HasMaxLength(2000);
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
                 entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
@@ -399,6 +408,104 @@ namespace Vertex.Repositories
                     .WithMany()
                     .HasForeignKey(x => x.TargetUserId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── 17. Project Files ─────────────────────────────
+            modelBuilder.Entity<ProjectFile>(entity =>
+            {
+                entity.ToTable("project_files");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.ProjectId).HasColumnName("project_id");
+                entity.Property(x => x.FileName).HasColumnName("file_name").HasMaxLength(300);
+                entity.Property(x => x.StoragePath).HasColumnName("storage_path").HasMaxLength(1000);
+                entity.Property(x => x.FileSize).HasColumnName("file_size");
+                entity.Property(x => x.MimeType).HasColumnName("mime_type").HasMaxLength(100);
+                entity.Property(x => x.UploadedBy).HasColumnName("uploaded_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+
+                entity.HasOne(x => x.Project)
+                    .WithMany(x => x.Files)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Uploader)
+                    .WithMany()
+                    .HasForeignKey(x => x.UploadedBy)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── 18. Project Links ─────────────────────────────
+            modelBuilder.Entity<ProjectLink>(entity =>
+            {
+                entity.ToTable("project_links");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.ProjectId).HasColumnName("project_id");
+                entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(2000);
+                entity.Property(x => x.Title).HasColumnName("title").HasMaxLength(300);
+                entity.Property(x => x.UploadedBy).HasColumnName("uploaded_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+
+                entity.HasIndex(x => x.ProjectId);
+
+                entity.HasOne(x => x.Project)
+                    .WithMany(x => x.Links)
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Uploader)
+                    .WithMany()
+                    .HasForeignKey(x => x.UploadedBy)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── 19. Task Attachments ──────────────────────────────────
+            modelBuilder.Entity<TaskAttachment>(entity =>
+            {
+                entity.ToTable("task_attachments");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.TaskId).HasColumnName("task_id");
+                entity.Property(x => x.Type).HasColumnName("type").HasMaxLength(20);
+                entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(2000);
+                entity.Property(x => x.Title).HasColumnName("title").HasMaxLength(300);
+                entity.Property(x => x.Size).HasColumnName("size");
+                entity.Property(x => x.MimeType).HasColumnName("mime_type").HasMaxLength(100);
+                entity.Property(x => x.UploadedBy).HasColumnName("uploaded_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+
+                entity.HasIndex(x => x.TaskId);
+
+                entity.HasOne(x => x.Task)
+                    .WithMany()
+                    .HasForeignKey(x => x.TaskId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Uploader)
+                    .WithMany()
+                    .HasForeignKey(x => x.UploadedBy)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ── 20. Invitations ──────────────────────────────────────
+            modelBuilder.Entity<Invitation>(entity =>
+            {
+                entity.ToTable("invitations");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(255);
+                entity.Property(x => x.TargetType).HasColumnName("target_type").HasMaxLength(20);
+                entity.Property(x => x.TargetId).HasColumnName("target_id");
+                entity.Property(x => x.Role).HasColumnName("role").HasMaxLength(20);
+                entity.Property(x => x.Token).HasColumnName("token").HasMaxLength(100);
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20);
+                entity.Property(x => x.CreatedBy).HasColumnName("created_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.ExpiredAt).HasColumnName("expired_at");
+
+                entity.HasIndex(x => x.Token).IsUnique();
+                entity.HasIndex(x => new { x.Email, x.TargetId, x.Status });
             });
         }
     }

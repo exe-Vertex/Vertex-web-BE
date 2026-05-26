@@ -113,9 +113,51 @@ namespace Vertex.Repositories.Repositories
             await _db.SaveChangesAsync();
         }
 
+        public async Task UpdateMemberAsync(ProjectMember member)
+        {
+            _db.ProjectMembers.Update(member);
+            await _db.SaveChangesAsync();
+        }
+
         public async Task RemoveMemberAsync(ProjectMember member)
         {
             _db.ProjectMembers.Remove(member);
+            await _db.SaveChangesAsync();
+        }
+
+        // ── Lecturer Extensions ────────────────────────────
+
+        public Task<List<ProjectMember>> GetMembersByProjectIdAsync(Guid projectId)
+        {
+            return _db.ProjectMembers
+                .Include(m => m.User)
+                .Where(m => m.ProjectId == projectId)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public Task<List<ProjectTask>> GetTasksByProjectIdAsync(Guid projectId)
+        {
+            return _db.ProjectTasks
+                .Include(t => t.Assignee)
+                .Include(t => t.Comments).ThenInclude(c => c.User)
+                .Where(t => t.ProjectId == projectId)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId)
+        {
+            return _db.TaskComments
+                .Include(c => c.User)
+                .Where(c => c.TaskId == taskId)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task AddCommentAsync(TaskComment comment)
+        {
+            _db.TaskComments.Add(comment);
             await _db.SaveChangesAsync();
         }
     }
