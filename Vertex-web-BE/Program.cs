@@ -112,6 +112,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ITaskNotifier, SignalRTaskNotifier>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 var app = builder.Build();
 
