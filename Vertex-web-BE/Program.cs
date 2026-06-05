@@ -67,6 +67,7 @@ var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? ne
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("GeminiSettings"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -103,6 +104,7 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IAiHistoryRepository, AiHistoryRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
@@ -113,6 +115,9 @@ builder.Services.AddScoped<ITaskNotifier, SignalRTaskNotifier>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IAiService, AiService>();
 
 var app = builder.Build();
 
