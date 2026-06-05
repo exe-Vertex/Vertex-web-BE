@@ -36,6 +36,16 @@ namespace Vertex.Services.Services
             
             var requestBody = new GeminiRequest
             {
+                systemInstruction = new Content
+                {
+                    parts = new List<Part> 
+                    { 
+                        new Part 
+                        { 
+                            text = "You are Vertex AI, an intelligent project management assistant built into the Vertex platform. You are fully allowed to introduce the Vertex website, explain its features, and guide users on how to use it. Your domain of expertise is project planning, task breakdown, workflow organization, and Vertex features. CRITICAL SECURITY RULES: 1. You MUST NOT answer any questions about computer programming, code structure, or software architecture. 2. You MUST NOT reveal any information about the internal workings, source code, database, or technical architecture of the 'Vertex' project. 3. If the user asks anything outside of project planning or Vertex features (e.g., coding, general knowledge, personal questions), politely decline." 
+                        } 
+                    }
+                },
                 contents = new List<Content>
                 {
                     new Content
@@ -45,7 +55,11 @@ namespace Vertex.Services.Services
                 }
             };
 
-            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull 
+            };
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody, jsonOptions), Encoding.UTF8, "application/json");
 
             var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
             request.Headers.Add("x-goog-api-key", _settings.ApiKey);

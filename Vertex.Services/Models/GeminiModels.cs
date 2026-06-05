@@ -5,6 +5,7 @@ namespace Vertex.Services.Models
 {
     public class GeminiRequest
     {
+        public Content? systemInstruction { get; set; }
         public List<Content> contents { get; set; } = new();
     }
 
