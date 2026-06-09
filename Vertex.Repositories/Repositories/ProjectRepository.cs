@@ -146,13 +146,55 @@ namespace Vertex.Repositories.Repositories
                 .ToListAsync();
         }
 
+        // ── Subtasks ──────────────────────────────────────
+
+        public Task<List<Subtask>> GetSubtasksByTaskIdAsync(Guid taskId)
+        {
+            return _db.Subtasks
+                .Where(s => s.TaskId == taskId)
+                .OrderBy(s => s.Position)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public Task<Subtask?> GetSubtaskByIdAsync(Guid subtaskId)
+        {
+            return _db.Subtasks.FirstOrDefaultAsync(s => s.Id == subtaskId);
+        }
+
+        public async Task AddSubtaskAsync(Subtask subtask)
+        {
+            _db.Subtasks.Add(subtask);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task UpdateSubtaskAsync(Subtask subtask)
+        {
+            _db.Subtasks.Update(subtask);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task DeleteSubtaskAsync(Subtask subtask)
+        {
+            _db.Subtasks.Remove(subtask);
+            await _db.SaveChangesAsync();
+        }
+
+        // ── Comments ──────────────────────────────────────
+
         public Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId)
         {
             return _db.TaskComments
                 .Include(c => c.User)
                 .Where(c => c.TaskId == taskId)
+                .OrderBy(c => c.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        public Task<TaskComment?> GetCommentByIdAsync(Guid commentId)
+        {
+            return _db.TaskComments.FirstOrDefaultAsync(c => c.Id == commentId);
         }
 
         public async Task AddCommentAsync(TaskComment comment)
@@ -160,5 +202,12 @@ namespace Vertex.Repositories.Repositories
             _db.TaskComments.Add(comment);
             await _db.SaveChangesAsync();
         }
+
+        public async Task DeleteCommentAsync(TaskComment comment)
+        {
+            _db.TaskComments.Remove(comment);
+            await _db.SaveChangesAsync();
+        }
     }
 }
+

@@ -123,4 +123,19 @@ namespace Vertex.Services.Models
         string UploadedBy,
         DateTimeOffset UploadedAt
     );
+
+    // ── Subtasks ────────────────────────────────────────
+
+    public record SubtaskDto(Guid Id, Guid TaskId, string Title, bool IsCompleted, int Position);
+
+    public record CreateSubtaskInput(string Title);
+
+    public record UpdateSubtaskInput(string? Title, bool? IsCompleted, int? Position);
+
+    // ── Task Comments ──────────────────────────────────
+    
+    public record ProjectTaskCommentDto(Guid Id, Guid TaskId, Guid UserId, string UserName, string UserAvatar, string Content, DateTimeOffset CreatedAt);
+
+    public record CreateTaskCommentInput(string Content);
 }
+

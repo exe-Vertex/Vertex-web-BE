@@ -66,7 +66,12 @@ namespace Vertex.Services.Services
             request.Content = jsonContent;
 
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(
+                    $"Gemini API returned {(int)response.StatusCode} ({response.StatusCode}): {errorBody}");
+            }
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

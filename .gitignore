@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Secrets – real config with passwords/API keys (use .example to set up)
+**/appsettings.Development.json
+
 # User-specific files
 *.rsuser
 *.suo
