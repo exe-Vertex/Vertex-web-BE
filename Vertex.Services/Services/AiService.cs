@@ -1,3 +1,4 @@
+#pragma warning disable SKEXP0070
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.Google;
 using Vertex.Entities.AI;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
@@ -90,7 +92,13 @@ RESPONSE STYLE:
             
             _logger.LogInformation("Sending chat request to AI with {HistoryCount} previous messages and {ContextCount} RAG context chunks.",
                 recentMessages.Count, relevantContext.Count);
-            var response = await chatCompletionService.GetChatMessageContentAsync(chatHistory);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                new GeminiPromptExecutionSettings
+                {
+                    MaxTokens = 2048,
+                    Temperature = 0.7
+                });
             var resultText = response.Content ?? string.Empty;
 
             // === Step 5: Save to database ===
