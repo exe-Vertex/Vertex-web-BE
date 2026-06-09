@@ -28,10 +28,22 @@ namespace Vertex.Repositories.Interfaces
         Task UpdateMemberAsync(ProjectMember member);
         Task RemoveMemberAsync(ProjectMember member);
 
+        // Subtasks
+        Task<List<Subtask>> GetSubtasksByTaskIdAsync(Guid taskId);
+        Task<Subtask?> GetSubtaskByIdAsync(Guid subtaskId);
+        Task AddSubtaskAsync(Subtask subtask);
+        Task UpdateSubtaskAsync(Subtask subtask);
+        Task DeleteSubtaskAsync(Subtask subtask);
+
+        // Comments
+        Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId);
+        Task<TaskComment?> GetCommentByIdAsync(Guid commentId);
+        Task AddCommentAsync(TaskComment comment);
+        Task DeleteCommentAsync(TaskComment comment);
+
         // Lecturer extensions
         Task<List<ProjectMember>> GetMembersByProjectIdAsync(Guid projectId);
         Task<List<ProjectTask>> GetTasksByProjectIdAsync(Guid projectId);
-        Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId);
-        Task AddCommentAsync(TaskComment comment);
     }
 }
+

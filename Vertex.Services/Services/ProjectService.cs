@@ -290,5 +290,105 @@ namespace Vertex.Services.Services
             m.User?.Name ?? "", m.User?.Email ?? "",
             m.User?.AvatarUrl ?? "", m.Role
         );
+
+        // ── Subtasks ────────────────────────────────────────
+
+        public async Task<List<SubtaskDto>> ListSubtasksAsync(Guid taskId)
+        {
+            var subtasks = await _projectRepo.GetSubtasksByTaskIdAsync(taskId);
+            return subtasks.Select(s => new SubtaskDto(s.Id, s.TaskId, s.Title, s.IsCompleted, s.Position)).ToList();
+        }
+
+        public async Task<SubtaskDto> CreateSubtaskAsync(Guid taskId, CreateSubtaskInput input)
+        {
+            if (string.IsNullOrWhiteSpace(input.Title))
+                throw new InvalidOperationException("Subtask title is required.");
+
+            var task = await _projectRepo.GetTaskByIdAsync(taskId);
+            if (task == null) throw new InvalidOperationException("Task not found.");
+
+            var existing = await _projectRepo.GetSubtasksByTaskIdAsync(taskId);
+            var maxPos = existing.Count > 0 ? existing.Max(s => s.Position) : -1;
+
+            var subtask = new Subtask
+            {
+                Id = Guid.NewGuid(),
+                TaskId = taskId,
+                Title = input.Title.Trim(),
+                IsCompleted = false,
+                Position = maxPos + 1,
+            };
+
+            await _projectRepo.AddSubtaskAsync(subtask);
+            return new SubtaskDto(subtask.Id, subtask.TaskId, subtask.Title, subtask.IsCompleted, subtask.Position);
+        }
+
+        public async Task<SubtaskDto> UpdateSubtaskAsync(Guid subtaskId, UpdateSubtaskInput input)
+        {
+            var subtask = await _projectRepo.GetSubtaskByIdAsync(subtaskId);
+            if (subtask == null) throw new InvalidOperationException("Subtask not found.");
+
+            if (input.Title != null) subtask.Title = input.Title.Trim();
+            if (input.IsCompleted.HasValue) subtask.IsCompleted = input.IsCompleted.Value;
+            if (input.Position.HasValue) subtask.Position = input.Position.Value;
+
+            await _projectRepo.UpdateSubtaskAsync(subtask);
+            return new SubtaskDto(subtask.Id, subtask.TaskId, subtask.Title, subtask.IsCompleted, subtask.Position);
+        }
+
+        public async Task DeleteSubtaskAsync(Guid subtaskId)
+        {
+            var subtask = await _projectRepo.GetSubtaskByIdAsync(subtaskId);
+            if (subtask == null) throw new InvalidOperationException("Subtask not found.");
+            await _projectRepo.DeleteSubtaskAsync(subtask);
+        }
+
+        // ── Comments ────────────────────────────────────────
+
+        public async Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid taskId)
+        {
+            var comments = await _projectRepo.GetCommentsByTaskIdAsync(taskId);
+            return comments.Select(c => new ProjectTaskCommentDto(
+                c.Id, c.TaskId, c.UserId,
+                c.User?.Name ?? "", c.User?.AvatarUrl ?? "",
+                c.Content, c.CreatedAt
+            )).ToList();
+        }
+
+        public async Task<ProjectTaskCommentDto> AddCommentAsync(Guid taskId, Guid userId, CreateTaskCommentInput input)
+        {
+            if (string.IsNullOrWhiteSpace(input.Content))
+                throw new InvalidOperationException("Comment content is required.");
+
+            var task = await _projectRepo.GetTaskByIdAsync(taskId);
+            if (task == null) throw new InvalidOperationException("Task not found.");
+
+            var comment = new TaskComment
+            {
+                Id = Guid.NewGuid(),
+                TaskId = taskId,
+                UserId = userId,
+                Content = input.Content.Trim(),
+                CreatedAt = DateTimeOffset.UtcNow,
+            };
+
+            await _projectRepo.AddCommentAsync(comment);
+
+            var user = await _userRepo.GetByIdAsync(userId);
+            return new ProjectTaskCommentDto(
+                comment.Id, comment.TaskId, comment.UserId,
+                user?.Name ?? "", user?.AvatarUrl ?? "",
+                comment.Content, comment.CreatedAt
+            );
+        }
+
+        public async Task DeleteCommentAsync(Guid commentId, Guid userId)
+        {
+            var comment = await _projectRepo.GetCommentByIdAsync(commentId);
+            if (comment == null) throw new InvalidOperationException("Comment not found.");
+            if (comment.UserId != userId)
+                throw new InvalidOperationException("You can only delete your own comments.");
+            await _projectRepo.DeleteCommentAsync(comment);
+        }
     }
 }

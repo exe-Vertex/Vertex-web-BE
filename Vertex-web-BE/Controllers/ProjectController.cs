@@ -354,5 +354,101 @@ namespace Vertex_web_BE.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        // ── Subtasks ──────────────────────────────────────
+
+        /// <summary>List subtasks for a task.</summary>
+        [HttpGet("{projectId}/tasks/{taskId}/subtasks")]
+        public async Task<IActionResult> ListSubtasks(Guid orgId, Guid projectId, Guid taskId)
+        {
+            var subtasks = await _projectService.ListSubtasksAsync(taskId);
+            return Ok(subtasks);
+        }
+
+        /// <summary>Create a subtask.</summary>
+        [HttpPost("{projectId}/tasks/{taskId}/subtasks")]
+        public async Task<IActionResult> CreateSubtask(Guid orgId, Guid projectId, Guid taskId, [FromBody] CreateSubtaskInput input)
+        {
+            try
+            {
+                var result = await _projectService.CreateSubtaskAsync(taskId, input);
+                return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/subtasks/{result.Id}", result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>Update a subtask (title, completed, position).</summary>
+        [HttpPut("{projectId}/tasks/{taskId}/subtasks/{subtaskId}")]
+        public async Task<IActionResult> UpdateSubtask(Guid orgId, Guid projectId, Guid taskId, Guid subtaskId, [FromBody] UpdateSubtaskInput input)
+        {
+            try
+            {
+                var result = await _projectService.UpdateSubtaskAsync(subtaskId, input);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>Delete a subtask.</summary>
+        [HttpDelete("{projectId}/tasks/{taskId}/subtasks/{subtaskId}")]
+        public async Task<IActionResult> DeleteSubtask(Guid orgId, Guid projectId, Guid taskId, Guid subtaskId)
+        {
+            try
+            {
+                await _projectService.DeleteSubtaskAsync(subtaskId);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        // ── Task Comments ─────────────────────────────────
+
+        /// <summary>List comments on a task.</summary>
+        [HttpGet("{projectId}/tasks/{taskId}/comments")]
+        public async Task<IActionResult> ListComments(Guid orgId, Guid projectId, Guid taskId)
+        {
+            var comments = await _projectService.ListCommentsAsync(taskId);
+            return Ok(comments);
+        }
+
+        /// <summary>Add a comment to a task.</summary>
+        [HttpPost("{projectId}/tasks/{taskId}/comments")]
+        public async Task<IActionResult> AddComment(Guid orgId, Guid projectId, Guid taskId, [FromBody] CreateTaskCommentInput input)
+        {
+            try
+            {
+                var result = await _projectService.AddCommentAsync(taskId, GetUserId(), input);
+                return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/comments/{result.Id}", result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>Delete your own comment.</summary>
+        [HttpDelete("{projectId}/tasks/{taskId}/comments/{commentId}")]
+        public async Task<IActionResult> DeleteComment(Guid orgId, Guid projectId, Guid taskId, Guid commentId)
+        {
+            try
+            {
+                await _projectService.DeleteCommentAsync(commentId, GetUserId());
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }
+

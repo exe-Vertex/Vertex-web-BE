@@ -90,7 +90,6 @@ RESPONSE STYLE:
             
             _logger.LogInformation("Sending chat request to AI with {HistoryCount} previous messages and {ContextCount} RAG context chunks.",
                 recentMessages.Count, relevantContext.Count);
-
             var response = await chatCompletionService.GetChatMessageContentAsync(chatHistory);
             var resultText = response.Content ?? string.Empty;
 
