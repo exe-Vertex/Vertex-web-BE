@@ -14,10 +14,12 @@ namespace Vertex_web_BE.Controllers
     public class AiController : ControllerBase
     {
         private readonly IAiService _aiService;
+        private readonly IAiSyncService _aiSyncService;
 
-        public AiController(IAiService aiService)
+        public AiController(IAiService aiService, IAiSyncService aiSyncService)
         {
             _aiService = aiService;
+            _aiSyncService = aiSyncService;
         }
 
         [HttpPost("chat")]
@@ -43,6 +45,29 @@ namespace Vertex_web_BE.Controllers
                 var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var history = await _aiService.GetHistoryAsync(userId);
                 return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Syncs project and task data from the database into the in-memory Vector Store.
+        /// This endpoint should be called whenever you want the AI to have up-to-date knowledge
+        /// about your projects. The data is stored in RAM and will be lost on server restart.
+        /// </summary>
+        [HttpPost("sync-data/{orgId}")]
+        public async Task<IActionResult> SyncData(Guid orgId)
+        {
+            try
+            {
+                var chunksCount = await _aiSyncService.SyncProjectDataAsync(orgId);
+                return Ok(new
+                {
+                    message = $"Successfully synced {chunksCount} data chunks into the AI Vector Store.",
+                    chunksCount
+                });
             }
             catch (Exception ex)
             {
