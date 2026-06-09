@@ -8,6 +8,7 @@
 
 # Secrets – real config with passwords/API keys (use .example to set up)
 **/appsettings.Development.json
+**/SETUP_SECRETS.md
 
 # User-specific files
 *.rsuser
