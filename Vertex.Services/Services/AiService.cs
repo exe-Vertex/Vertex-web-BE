@@ -1,10 +1,14 @@
+#pragma warning disable SKEXP0070
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
+using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.Google;
 using Vertex.Entities.AI;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
@@ -14,77 +18,96 @@ namespace Vertex.Services.Services
 {
     public class AiService : IAiService
     {
-        private readonly HttpClient _httpClient;
+        private readonly Kernel _kernel;
         private readonly IAiHistoryRepository _historyRepository;
+        private readonly IAiSyncService _syncService;
         private readonly GeminiSettings _settings;
+        private readonly ILogger<AiService> _logger;
 
-        public AiService(HttpClient httpClient, IAiHistoryRepository historyRepository, IOptions<GeminiSettings> settings)
+        // System prompt that defines the AI's personality, capabilities, and security rules
+        private const string BaseSystemPrompt = @"You are Vertex AI, an intelligent project management assistant built into the Vertex platform.
+
+YOUR CAPABILITIES:
+- You can introduce the Vertex website, explain its features, and guide users on how to use it.
+- You are an expert in project planning, task breakdown, workflow organization, and team management.
+- You can analyze project data provided to you and give specific advice about the user's actual projects and tasks.
+
+CRITICAL SECURITY RULES:
+1. You MUST NOT answer any questions about computer programming, code structure, or software architecture.
+2. You MUST NOT reveal any information about the internal workings, source code, database, or technical architecture of the Vertex project.
+3. If the user asks anything outside of project planning or Vertex features (e.g., coding, general knowledge, personal questions), politely decline.
+
+RESPONSE STYLE:
+- Be concise, professional, and friendly.
+- When discussing project data, reference specific project names, task titles, and member names when available.
+- Use bullet points and clear formatting for task breakdowns.";
+
+        public AiService(
+            Kernel kernel,
+            IAiHistoryRepository historyRepository,
+            IAiSyncService syncService,
+            IOptions<GeminiSettings> settings,
+            ILogger<AiService> logger)
         {
-            _httpClient = httpClient;
+            _kernel = kernel;
             _historyRepository = historyRepository;
+            _syncService = syncService;
             _settings = settings.Value;
+            _logger = logger;
         }
 
         public async Task<AiHistory> ChatAsync(Guid userId, string prompt)
         {
-            if (string.IsNullOrEmpty(_settings.ApiKey) || _settings.ApiKey == "YOUR_GEMINI_API_KEY_HERE")
-            {
-                throw new InvalidOperationException("Gemini API Key is not configured.");
-            }
-
-            var requestUri = _settings.BaseUrl;
+            // === Step 1: RAG — Search Vector Store for relevant project context ===
+            var relevantContext = await _syncService.SearchRelevantContextAsync(prompt, limit: 3);
             
-            var requestBody = new GeminiRequest
+            // === Step 2: Build system prompt with injected context ===
+            var systemPrompt = BuildSystemPromptWithContext(relevantContext);
+
+            // === Step 3: Build ChatHistory with memory (previous conversations) ===
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(systemPrompt);
+
+            // Load previous messages from database to give AI "memory"
+            var previousMessages = await _historyRepository.GetByUserIdAsync(userId);
+            var recentMessages = previousMessages
+                .OrderBy(m => m.CreatedAt)
+                .TakeLast(_settings.MaxHistoryMessages)
+                .ToList();
+
+            foreach (var msg in recentMessages)
             {
-                systemInstruction = new Content
+                chatHistory.AddUserMessage(msg.Prompt);
+                if (!string.IsNullOrEmpty(msg.PlanSummary))
                 {
-                    parts = new List<Part> 
-                    { 
-                        new Part 
-                        { 
-                            text = "You are Vertex AI, an intelligent project management assistant built into the Vertex platform. You are fully allowed to introduce the Vertex website, explain its features, and guide users on how to use it. Your domain of expertise is project planning, task breakdown, workflow organization, and Vertex features. CRITICAL SECURITY RULES: 1. You MUST NOT answer any questions about computer programming, code structure, or software architecture. 2. You MUST NOT reveal any information about the internal workings, source code, database, or technical architecture of the 'Vertex' project. 3. If the user asks anything outside of project planning or Vertex features (e.g., coding, general knowledge, personal questions), politely decline." 
-                        } 
-                    }
-                },
-                contents = new List<Content>
-                {
-                    new Content
-                    {
-                        parts = new List<Part> { new Part { text = prompt } }
-                    }
+                    chatHistory.AddAssistantMessage(msg.PlanSummary);
                 }
-            };
-
-            var jsonOptions = new JsonSerializerOptions 
-            { 
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull 
-            };
-            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody, jsonOptions), Encoding.UTF8, "application/json");
-
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-            request.Headers.Add("x-goog-api-key", _settings.ApiKey);
-            request.Content = jsonContent;
-
-            var response = await _httpClient.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException(
-                    $"Gemini API returned {(int)response.StatusCode} ({response.StatusCode}): {errorBody}");
             }
 
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // Add the current user message
+            chatHistory.AddUserMessage(prompt);
 
-            var resultText = geminiResponse?.candidates?[0]?.content?.parts?[0]?.text ?? string.Empty;
-            var tokensUsed = geminiResponse?.usageMetadata?.totalTokenCount ?? 0;
+            // === Step 4: Get AI response via Semantic Kernel ===
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+            
+            _logger.LogInformation("Sending chat request to AI with {HistoryCount} previous messages and {ContextCount} RAG context chunks.",
+                recentMessages.Count, relevantContext.Count);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                new GeminiPromptExecutionSettings
+                {
+                    MaxTokens = 2048,
+                    Temperature = 0.7
+                });
+            var resultText = response.Content ?? string.Empty;
 
+            // === Step 5: Save to database ===
             var history = new AiHistory
             {
                 UserId = userId,
                 Prompt = prompt,
                 PlanSummary = resultText,
-                TokensUsed = tokensUsed,
+                TokensUsed = 0, // Semantic Kernel doesn't expose token count directly for Google
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
@@ -96,6 +119,31 @@ namespace Vertex.Services.Services
         public async Task<List<AiHistory>> GetHistoryAsync(Guid userId)
         {
             return await _historyRepository.GetByUserIdAsync(userId);
+        }
+
+        /// <summary>
+        /// Builds the full system prompt by injecting RAG context (relevant project data)
+        /// into the base system prompt.
+        /// </summary>
+        private string BuildSystemPromptWithContext(List<string> relevantContext)
+        {
+            if (relevantContext == null || relevantContext.Count == 0)
+            {
+                return BaseSystemPrompt;
+            }
+
+            var contextSection = new StringBuilder();
+            contextSection.AppendLine();
+            contextSection.AppendLine("RELEVANT PROJECT DATA (from the user's workspace):");
+            contextSection.AppendLine("Use this data to answer the user's question accurately. Only reference this data if the user's question is related to it.");
+            contextSection.AppendLine("---");
+            foreach (var chunk in relevantContext)
+            {
+                contextSection.AppendLine(chunk);
+                contextSection.AppendLine("---");
+            }
+
+            return BaseSystemPrompt + contextSection;
         }
     }
 }

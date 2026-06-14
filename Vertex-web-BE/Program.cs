@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Google;
+using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Plugins.Memory;
 using Vertex.Repositories;
 using Vertex.Repositories.Interfaces;
 using Vertex.Repositories.Repositories;
@@ -118,7 +122,34 @@ builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 
 builder.Services.AddHttpClient();
+
+// ── Semantic Kernel + AI Services Registration ──
+var geminiSettings = builder.Configuration.GetSection("GeminiSettings").Get<GeminiSettings>() ?? new GeminiSettings();
+
+// Build the Semantic Kernel with Google Gemini Chat Completion
+#pragma warning disable SKEXP0001, SKEXP0050, SKEXP0070
+var kernelBuilder = Kernel.CreateBuilder();
+kernelBuilder.AddGoogleAIGeminiChatCompletion(
+    modelId: geminiSettings.ChatModel,
+    apiKey: geminiSettings.ApiKey
+);
+var kernel = kernelBuilder.Build();
+builder.Services.AddSingleton(kernel);
+
+// Build the Semantic Text Memory (VolatileMemoryStore + Google Embedding)
+var embeddingService = new GoogleAITextEmbeddingGenerationService(
+    modelId: geminiSettings.EmbeddingModel,
+    apiKey: geminiSettings.ApiKey
+);
+var memoryStore = new VolatileMemoryStore();
+var semanticMemory = new SemanticTextMemory(memoryStore, embeddingService);
+builder.Services.AddSingleton<ISemanticTextMemory>(semanticMemory);
+#pragma warning restore SKEXP0001, SKEXP0050, SKEXP0070
+
+// Register AI services
+builder.Services.AddScoped<IAiSyncService, AiSyncService>();
 builder.Services.AddScoped<IAiService, AiService>();
+
 
 var app = builder.Build();
 
