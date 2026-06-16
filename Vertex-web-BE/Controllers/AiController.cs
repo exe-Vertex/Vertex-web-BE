@@ -28,7 +28,8 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                var result = await _aiService.ChatAsync(userId, request.Prompt);
+                var orgId = request.OrgId ?? Guid.Empty;
+                var result = await _aiService.ChatAsync(userId, orgId, request.Prompt);
                 return Ok(result);
             }
             catch (Exception ex)

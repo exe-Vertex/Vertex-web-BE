@@ -17,7 +17,7 @@ namespace Vertex.Services.Services
     /// </summary>
     public class AiSyncService : IAiSyncService
     {
-        private const string CollectionName = "vertex-projects";
+        private static string GetCollectionName(Guid orgId) => $"vertex-{orgId}";
 
         private readonly IProjectRepository _projectRepository;
         private readonly ISemanticTextMemory _memory;
@@ -37,6 +37,7 @@ namespace Vertex.Services.Services
         public async Task<int> SyncProjectDataAsync(Guid orgId)
         {
             _logger.LogInformation("Starting data sync for organization {OrgId}...", orgId);
+            var collectionName = GetCollectionName(orgId);
 
             var projects = await _projectRepository.GetByOrgIdAsync(orgId);
             int chunkCount = 0;
@@ -51,7 +52,7 @@ namespace Vertex.Services.Services
                 projectText.AppendLine($"Created: {project.CreatedAt:yyyy-MM-dd}");
 
                 await _memory.SaveInformationAsync(
-                    collection: CollectionName,
+                    collection: collectionName,
                     id: $"project-{project.Id}",
                     text: projectText.ToString(),
                     description: $"Overview of project '{project.Name}'");
@@ -70,7 +71,7 @@ namespace Vertex.Services.Services
                     }
 
                     await _memory.SaveInformationAsync(
-                        collection: CollectionName,
+                        collection: collectionName,
                         id: $"project-members-{project.Id}",
                         text: membersText.ToString(),
                         description: $"Members of project '{project.Name}'");
@@ -93,7 +94,7 @@ namespace Vertex.Services.Services
                         }
 
                         await _memory.SaveInformationAsync(
-                            collection: CollectionName,
+                            collection: collectionName,
                             id: $"project-tasks-{project.Id}-{group.Key}",
                             text: tasksText.ToString(),
                             description: $"Tasks with status '{group.Key}' in project '{project.Name}'");
@@ -107,14 +108,15 @@ namespace Vertex.Services.Services
         }
 
         /// <inheritdoc />
-        public async Task<List<string>> SearchRelevantContextAsync(string query, int limit = 3)
+        public async Task<List<string>> SearchRelevantContextAsync(Guid orgId, string query, int limit = 3)
         {
             var results = new List<string>();
+            var collectionName = GetCollectionName(orgId);
 
             try
             {
                 await foreach (var result in _memory.SearchAsync(
-                    collection: CollectionName,
+                    collection: collectionName,
                     query: query,
                     limit: limit,
                     minRelevanceScore: 0.5))

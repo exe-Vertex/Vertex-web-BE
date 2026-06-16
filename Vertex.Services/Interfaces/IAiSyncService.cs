@@ -19,8 +19,8 @@ namespace Vertex.Services.Interfaces
 
         /// <summary>
         /// Performs a semantic search against the Vector Store to find the most relevant
-        /// project/task context chunks for a given user query.
+        /// project/task context chunks for a given user query, scoped to a specific organization.
         /// </summary>
-        Task<List<string>> SearchRelevantContextAsync(string query, int limit = 3);
+        Task<List<string>> SearchRelevantContextAsync(Guid orgId, string query, int limit = 3);
     }
 }

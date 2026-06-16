@@ -136,12 +136,13 @@ kernelBuilder.AddGoogleAIGeminiChatCompletion(
 var kernel = kernelBuilder.Build();
 builder.Services.AddSingleton(kernel);
 
-// Build the Semantic Text Memory (VolatileMemoryStore + Google Embedding)
+// Build the Semantic Text Memory (Persistent JsonMemoryStore + Google Embedding)
 var embeddingService = new GoogleAITextEmbeddingGenerationService(
     modelId: geminiSettings.EmbeddingModel,
     apiKey: geminiSettings.ApiKey
 );
-var memoryStore = new VolatileMemoryStore();
+var vectorStorePath = Path.Combine(AppContext.BaseDirectory, "App_Data", "vector_store.json");
+var memoryStore = new Vertex.Services.Services.JsonMemoryStore(vectorStorePath);
 var semanticMemory = new SemanticTextMemory(memoryStore, embeddingService);
 builder.Services.AddSingleton<ISemanticTextMemory>(semanticMemory);
 #pragma warning restore SKEXP0001, SKEXP0050, SKEXP0070

@@ -56,10 +56,10 @@ RESPONSE STYLE:
             _logger = logger;
         }
 
-        public async Task<AiHistory> ChatAsync(Guid userId, string prompt)
+        public async Task<AiHistory> ChatAsync(Guid userId, Guid orgId, string prompt)
         {
             // === Step 1: RAG — Search Vector Store for relevant project context ===
-            var relevantContext = await _syncService.SearchRelevantContextAsync(prompt, limit: 3);
+            var relevantContext = await _syncService.SearchRelevantContextAsync(orgId, prompt, limit: 3);
             
             // === Step 2: Build system prompt with injected context ===
             var systemPrompt = BuildSystemPromptWithContext(relevantContext);

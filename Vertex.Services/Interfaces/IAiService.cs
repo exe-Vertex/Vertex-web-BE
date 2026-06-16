@@ -7,7 +7,7 @@ namespace Vertex.Services.Interfaces
 {
     public interface IAiService
     {
-        Task<AiHistory> ChatAsync(Guid userId, string prompt);
+        Task<AiHistory> ChatAsync(Guid userId, Guid orgId, string prompt);
         Task<List<AiHistory>> GetHistoryAsync(Guid userId);
     }
 }

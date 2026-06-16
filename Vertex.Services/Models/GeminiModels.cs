@@ -41,5 +41,6 @@ namespace Vertex.Services.Models
     public class ChatRequestDto
     {
         public string Prompt { get; set; } = string.Empty;
+        public Guid? OrgId { get; set; }
     }
 }
