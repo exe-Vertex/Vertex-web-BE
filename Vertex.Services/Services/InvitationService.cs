@@ -136,6 +136,26 @@ namespace Vertex.Services.Services
                     };
                     _context.ProjectMembers.Add(newMember);
                 }
+
+                // Tự động thêm vào Organization của Project để người dùng có thể thấy Organization và Project trên Dashboard
+                var project = await _context.Projects.FindAsync(invitation.TargetId);
+                if (project != null)
+                {
+                    var existingOrgMember = await _context.OrganizationMembers
+                        .FirstOrDefaultAsync(x => x.OrgId == project.OrgId && x.UserId == userId);
+                    if (existingOrgMember == null)
+                    {
+                        var newOrgMember = new OrganizationMember
+                        {
+                            Id = Guid.NewGuid(),
+                            OrgId = project.OrgId,
+                            UserId = userId,
+                            Role = "member", // Role mặc định trong tổ chức
+                            JoinedAt = DateTimeOffset.UtcNow
+                        };
+                        _context.OrganizationMembers.Add(newOrgMember);
+                    }
+                }
             }
 
             invitation.Status = "Accepted";

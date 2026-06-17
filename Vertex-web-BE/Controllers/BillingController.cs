@@ -118,12 +118,14 @@ namespace Vertex_web_BE.Controllers
                 if (planLower == "pro")
                 {
                     org.MaxMembers = 20;
+                    org.MaxProjects = 15;
                     org.AiQuota = 200;
                     org.StorageLimit = 10737418240; // 10 GB
                 }
                 else if (planLower == "business")
                 {
                     org.MaxMembers = 200;
+                    org.MaxProjects = 100;
                     org.AiQuota = 1000;
                     org.StorageLimit = 53687091200; // 50 GB
                 }
@@ -171,6 +173,7 @@ namespace Vertex_web_BE.Controllers
                         org.Name,
                         org.Plan,
                         org.MaxMembers,
+                        org.MaxProjects,
                         org.AiQuota,
                         org.StorageLimit
                     }

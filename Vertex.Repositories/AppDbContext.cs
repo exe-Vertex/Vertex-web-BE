@@ -114,6 +114,7 @@ namespace Vertex.Repositories
                 entity.Property(x => x.Slug).HasColumnName("slug").HasMaxLength(100);
                 entity.Property(x => x.Plan).HasColumnName("plan").HasMaxLength(20).HasDefaultValue("free");
                 entity.Property(x => x.MaxMembers).HasColumnName("max_members");
+                entity.Property(x => x.MaxProjects).HasColumnName("max_projects").HasDefaultValue(3);
                 entity.Property(x => x.AiQuota).HasColumnName("ai_quota");
                 entity.Property(x => x.StorageLimit).HasColumnName("storage_limit");
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
@@ -224,6 +225,7 @@ namespace Vertex.Repositories
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.UserId).HasColumnName("user_id");
                 entity.Property(x => x.Role).HasColumnName("role").HasMaxLength(20);
+                entity.Property(x => x.ProjectSkills).HasColumnName("project_skills").HasMaxLength(500);
                 entity.Property(x => x.JoinedAt).HasColumnName("joined_at");
 
                 entity.HasIndex(x => new { x.ProjectId, x.UserId }).IsUnique();

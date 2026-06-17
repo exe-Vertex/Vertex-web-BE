@@ -28,6 +28,7 @@ namespace Vertex.Entities.Projects
         public Guid ProjectId { get; set; }
         public Guid UserId { get; set; }
         public string Role { get; set; } = "Member"; // Leader | Member | Guest
+        public string? ProjectSkills { get; set; }
         public DateTimeOffset JoinedAt { get; set; }
 
         // Navigation

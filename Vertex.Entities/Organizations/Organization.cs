@@ -10,6 +10,7 @@ namespace Vertex.Entities.Organizations
         public string Slug { get; set; } = string.Empty;
         public string Plan { get; set; } = "free";
         public int MaxMembers { get; set; } = 5;
+        public int MaxProjects { get; set; } = 3;
         public int AiQuota { get; set; } = 20;
         public long StorageLimit { get; set; } = 1073741824; // 1 GB
         public DateTimeOffset CreatedAt { get; set; }

@@ -162,6 +162,8 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine("Running self-healing database check...");
         db.Database.ExecuteSqlRaw("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_link VARCHAR(2000);");
+        db.Database.ExecuteSqlRaw("ALTER TABLE project_members ADD COLUMN IF NOT EXISTS project_skills VARCHAR(500) NULL;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_projects INTEGER DEFAULT 3;");
         
         db.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (

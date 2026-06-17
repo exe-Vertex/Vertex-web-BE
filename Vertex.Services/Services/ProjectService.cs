@@ -39,6 +39,14 @@ namespace Vertex.Services.Services
             if (string.IsNullOrWhiteSpace(input.Name))
                 throw new InvalidOperationException("Project name is required.");
 
+            var org = await _orgRepo.GetByIdAsync(orgId);
+            if (org == null)
+                throw new InvalidOperationException("Organization not found.");
+
+            var currentProjects = await _projectRepo.GetByOrgIdAsync(orgId);
+            if (currentProjects.Count >= org.MaxProjects)
+                throw new InvalidOperationException($"Tổ chức của bạn đã đạt giới hạn tối đa {org.MaxProjects} dự án. Vui lòng nâng cấp gói để tạo thêm.");
+
             var now = DateTimeOffset.UtcNow;
             var project = new Project
             {
@@ -226,6 +234,7 @@ namespace Vertex.Services.Services
                 ProjectId = projectId,
                 UserId = user.Id,
                 Role = input.Role,
+                ProjectSkills = input.ProjectSkills?.Trim(),
                 JoinedAt = DateTimeOffset.UtcNow,
             };
 
@@ -242,6 +251,7 @@ namespace Vertex.Services.Services
             if (member == null) throw new InvalidOperationException("Member not found in the project.");
 
             member.Role = input.Role;
+            member.ProjectSkills = input.ProjectSkills?.Trim();
             await _projectRepo.UpdateMemberAsync(member);
 
             return MapMember(member);
@@ -288,7 +298,7 @@ namespace Vertex.Services.Services
         private static ProjectMemberDto MapMember(ProjectMember m) => new(
             m.Id, m.UserId,
             m.User?.Name ?? "", m.User?.Email ?? "",
-            m.User?.AvatarUrl ?? "", m.Role
+            m.User?.AvatarUrl ?? "", m.Role, m.ProjectSkills
         );
 
         // ── Subtasks ────────────────────────────────────────

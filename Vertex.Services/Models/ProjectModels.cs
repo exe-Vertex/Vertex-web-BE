@@ -32,9 +32,9 @@ namespace Vertex.Services.Models
         string? SubmissionLink
     );
 
-    public record AddProjectMemberInput(string EmailOrUserId, string Role);
+    public record AddProjectMemberInput(string EmailOrUserId, string Role, string? ProjectSkills = null);
 
-    public record UpdateProjectMemberInput(string Role);
+    public record UpdateProjectMemberInput(string Role, string? ProjectSkills = null);
 
     // ── Outputs ─────────────────────────────────────────
 
@@ -44,7 +44,8 @@ namespace Vertex.Services.Models
         string Name,
         string Email,
         string AvatarUrl,
-        string Role
+        string Role,
+        string? ProjectSkills = null
     );
 
     public record TaskDto(

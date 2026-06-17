@@ -74,6 +74,36 @@ namespace Vertex.Services.Services
 
         public async Task<List<OrgSummary>> GetMyOrgsAsync(Guid userId)
         {
+            // Tự động sửa lỗi (Auto-heal): Nếu user có trong Project nhưng chưa có trong Organization cha, thêm họ vào Organization
+            var projectOrgs = await _context.ProjectMembers
+                .Where(pm => pm.UserId == userId && pm.Project != null)
+                .Select(pm => pm.Project!.OrgId)
+                .Distinct()
+                .ToListAsync();
+
+            bool changed = false;
+            foreach (var orgId in projectOrgs)
+            {
+                var exists = await _context.OrganizationMembers.AnyAsync(om => om.OrgId == orgId && om.UserId == userId);
+                if (!exists)
+                {
+                    _context.OrganizationMembers.Add(new OrganizationMember
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = orgId,
+                        UserId = userId,
+                        Role = "member",
+                        JoinedAt = DateTimeOffset.UtcNow
+                    });
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                await _context.SaveChangesAsync();
+            }
+
             var orgs = await _orgRepo.GetByUserIdAsync(userId);
             var summaries = new List<OrgSummary>();
 
