@@ -121,6 +121,90 @@ RESPONSE STYLE:
             return await _historyRepository.GetByUserIdAsync(userId);
         }
 
+        public async Task<string> GeneratePlanAsync(Guid userId, Models.GeneratePlanRequestDto request)
+        {
+            var memberDetails = new StringBuilder();
+            if (request.TeamMembers != null)
+            {
+                foreach (var m in request.TeamMembers)
+                {
+                    var skillsList = new List<string>();
+                    if (!string.IsNullOrEmpty(m.TargetSkills))
+                        skillsList.Add($"Target: {m.TargetSkills}");
+                    if (m.CoreSkills != null && m.CoreSkills.Count > 0)
+                        skillsList.Add($"Core: {string.Join(", ", m.CoreSkills)}");
+
+                    var skillsText = skillsList.Count > 0 ? $" (Skills - {string.Join("; ", skillsList)})" : "";
+                    memberDetails.AppendLine($"- {m.Name}{skillsText}");
+                }
+            }
+
+            var weeks = Math.Max(2, Math.Min(8, request.DurationWeeks));
+            var systemPrompt = "You are an AI Project Planner for Vertex. Your task is to generate a structured project plan based on the goal, description, team size, duration, difficulty, and available team members with their skills. You MUST respond with ONLY a valid JSON object. Do not include markdown formatting, backticks, or introduction. CRITICAL RULES: 1. Do NOT use raw double quotes inside any JSON string value (use single quotes like 'hero' instead). 2. Do NOT include raw newline characters or carriage returns inside any JSON string values (keep each string value on a single line).";
+
+            var promptText = $@"Goal: {request.ProjectGoal}
+Description: {request.Description}
+Category: {request.Category}
+Difficulty: {request.Difficulty}
+Duration: {weeks} weeks
+Team size: {request.TeamSize}
+Available team members:
+{memberDetails}
+
+Generate a project plan and analyze project risks. You MUST respond with ONLY a valid JSON object. No markdown formatting, no backticks, no introduction.
+The JSON must have these exact keys at the top level:
+1. ""plan"": An array of objects (one object per week, max {weeks} objects) where each object represents a week and contains:
+   - week: string (e.g. ""Week 1"")
+   - milestone: string (a concise summary of the week's milestone, e.g. ""Database Schema and Backend Setup"")
+   - subtasks: An array of objects, where each object represents an individual actionable task (2 to 5 tasks per week) containing:
+     - title: string (short, clear, actionable task title, e.g. ""Create user registration API"")
+     - description: string (detailed explanation of the task, what needs to be done, requirements, etc. Keep on a single line, no newlines)
+     - assignee: string (must be one of the available team members' exact name, or ""Unassigned"". Assign tasks logically based on their skills)
+     - estHours: number (estimated effort in hours, e.g. 6. Estimate realistically based on difficulty and task scope, NOT a flat 40h)
+     - priority: string (must be ""High"", ""Medium"", or ""Low"")
+2. ""risks"": An array of strings containing 2 to 4 project-specific risks analyzed from the description, category, difficulty, duration, and team constraints (e.g. ""Potential delay in Figma design approval due to short timeline"").
+
+CRITICAL JSON RULES:
+1. Do NOT output any markdown tags (like ```json or ```).
+2. Do NOT output any text before or after the JSON object.
+3. If you write quotes inside string values (such as in description or title), use single quotes (e.g. 'database') instead of double quotes to prevent breaking the JSON parser.
+4. Do NOT include raw newline characters or carriage returns inside any JSON string values. Every string value must be strictly on a single line.";
+
+
+
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(systemPrompt);
+            chatHistory.AddUserMessage(promptText);
+
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+            
+            _logger.LogInformation("Sending plan generation request to AI.");
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                new GeminiPromptExecutionSettings
+                {
+                    MaxTokens = 8192,
+                    Temperature = 0.5
+                });
+
+            var resultText = response.Content ?? "{\"plan\":[],\"risks\":[]}";
+            _logger.LogInformation("Raw AI Response content: {Content}", resultText);
+            resultText = resultText.Replace("```json", "").Replace("```", "").Trim();
+
+            var history = new AiHistory
+            {
+                UserId = userId,
+                Prompt = $"Plan generation for: {request.ProjectGoal}",
+                PlanSummary = resultText,
+                TokensUsed = 0,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _historyRepository.AddAsync(history);
+
+            return resultText;
+        }
+
         /// <summary>
         /// Builds the full system prompt by injecting RAG context (relevant project data)
         /// into the base system prompt.

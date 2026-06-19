@@ -122,6 +122,29 @@ namespace Vertex.Services.Services
 
         // ── Tasks ──────────────────────────────────────────
 
+        public async Task<List<TaskDto>> GetFilteredTasksAsync(Guid projectId, string? status, string? priority, Guid? assigneeId)
+        {
+            var tasks = await _projectRepo.GetTasksByProjectIdAsync(projectId);
+            var query = tasks.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(t => t.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(priority))
+            {
+                query = query.Where(t => t.Priority.Equals(priority, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (assigneeId.HasValue)
+            {
+                query = query.Where(t => t.AssigneeId == assigneeId.Value);
+            }
+
+            return query.OrderBy(t => t.Position).Select(MapTask).ToList();
+        }
+
         public async Task<TaskDto> CreateTaskAsync(Guid projectId, CreateTaskInput input)
         {
             if (string.IsNullOrWhiteSpace(input.Title))

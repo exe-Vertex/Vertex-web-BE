@@ -98,6 +98,19 @@ namespace Vertex_web_BE.Controllers
 
         // ── Tasks ──────────────────────────────────────────
 
+        /// <summary>Get filtered tasks of a project.</summary>
+        [HttpGet("{projectId}/tasks")]
+        public async Task<IActionResult> GetFilteredTasks(
+            Guid orgId, 
+            Guid projectId, 
+            [FromQuery] string? status = null, 
+            [FromQuery] string? priority = null, 
+            [FromQuery] Guid? assigneeId = null)
+        {
+            var tasks = await _projectService.GetFilteredTasksAsync(projectId, status, priority, assigneeId);
+            return Ok(tasks);
+        }
+
         /// <summary>Create a new task in a project.</summary>
         [HttpPost("{projectId}/tasks")]
         public async Task<IActionResult> CreateTask(Guid orgId, Guid projectId, [FromBody] CreateTaskInput input)

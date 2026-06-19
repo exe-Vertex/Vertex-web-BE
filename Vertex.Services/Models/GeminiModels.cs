@@ -43,4 +43,23 @@ namespace Vertex.Services.Models
         public string Prompt { get; set; } = string.Empty;
         public Guid? OrgId { get; set; }
     }
+
+    public class GeneratePlanRequestDto
+    {
+        public string ProjectGoal { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Difficulty { get; set; } = string.Empty;
+        public int DurationWeeks { get; set; }
+        public int TeamSize { get; set; }
+        public List<MemberSkillDto> TeamMembers { get; set; } = new();
+    }
+
+    public class MemberSkillDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? TargetSkills { get; set; }
+        public List<string>? CoreSkills { get; set; }
+    }
 }
+

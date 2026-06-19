@@ -17,6 +17,7 @@ namespace Vertex.Services.Interfaces
         Task<TaskDto> CreateTaskAsync(Guid projectId, CreateTaskInput input);
         Task<TaskDto> UpdateTaskAsync(Guid taskId, UpdateTaskInput input);
         Task DeleteTaskAsync(Guid taskId);
+        Task<List<TaskDto>> GetFilteredTasksAsync(Guid projectId, string? status, string? priority, Guid? assigneeId);
 
         // Members
         Task<List<ProjectMemberDto>> ListProjectMembersAsync(Guid projectId);

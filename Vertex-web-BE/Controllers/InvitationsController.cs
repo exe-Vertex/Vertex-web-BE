@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Vertex.Services.Interfaces;
 using Vertex_web_BE.Models;
+using Vertex.Repositories;
 
 namespace Vertex_web_BE.Controllers
 {
@@ -13,10 +14,12 @@ namespace Vertex_web_BE.Controllers
     public class InvitationsController : ControllerBase
     {
         private readonly IInvitationService _invitationService;
+        private readonly AppDbContext _context;
 
-        public InvitationsController(IInvitationService invitationService)
+        public InvitationsController(IInvitationService invitationService, AppDbContext context)
         {
             _invitationService = invitationService;
+            _context = context;
         }
 
         [HttpPost]
@@ -40,12 +43,24 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var invitation = await _invitationService.VerifyTokenAsync(token);
+                Guid? orgId = null;
+                if (invitation.TargetType == "Project")
+                {
+                    var project = await _context.Projects.FindAsync(invitation.TargetId);
+                    orgId = project?.OrgId;
+                }
+                else if (invitation.TargetType == "Organization")
+                {
+                    orgId = invitation.TargetId;
+                }
+
                 return Ok(new
                 {
                     Email = invitation.Email,
                     TargetType = invitation.TargetType,
                     TargetId = invitation.TargetId,
-                    Role = invitation.Role
+                    Role = invitation.Role,
+                    OrgId = orgId
                 });
             }
             catch (Exception ex)

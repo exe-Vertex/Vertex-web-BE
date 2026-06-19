@@ -38,6 +38,21 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
+        [HttpPost("generate-plan")]
+        public async Task<IActionResult> GeneratePlan([FromBody] GeneratePlanRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var planJson = await _aiService.GeneratePlanAsync(userId, request);
+                return Ok(new { planSummary = planJson });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("history")]
         public async Task<IActionResult> GetHistory()
         {
