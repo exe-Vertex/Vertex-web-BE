@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Vertex.Entities.Organizations;
 using Vertex.Entities.Projects;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
@@ -43,6 +44,8 @@ namespace Vertex.Services.Services
             if (org == null)
                 throw new InvalidOperationException("Organization not found.");
 
+            await EnsureOrgMemberAsync(orgId, creatorId);
+
             var currentProjects = await _projectRepo.GetByOrgIdAsync(orgId);
             if (currentProjects.Count >= org.MaxProjects)
                 throw new InvalidOperationException($"Tổ chức của bạn đã đạt giới hạn tối đa {org.MaxProjects} dự án. Vui lòng nâng cấp gói để tạo thêm.");
@@ -75,9 +78,15 @@ namespace Vertex.Services.Services
             return new ProjectSummaryDto(project.Id, project.Name, project.Description, project.Deadline, 0, 1, 0, project.CreatedAt);
         }
 
-        public async Task<List<ProjectSummaryDto>> ListProjectsAsync(Guid orgId)
+        public async Task<List<ProjectSummaryDto>> ListProjectsAsync(Guid orgId, Guid requesterId)
         {
+            var orgMember = await EnsureOrgMemberAsync(orgId, requesterId);
             var projects = await _projectRepo.GetByOrgIdAsync(orgId);
+            if (!CanSeeAllProjects(orgMember.Role))
+            {
+                projects = projects.Where(p => p.Members.Any(m => m.UserId == requesterId)).ToList();
+            }
+
             return projects.Select(p => new ProjectSummaryDto(
                 p.Id, p.Name, p.Description, p.Deadline,
                 p.Tasks.Count, p.Members.Count,
@@ -85,8 +94,10 @@ namespace Vertex.Services.Services
             )).ToList();
         }
 
-        public async Task<ProjectDetailDto> GetProjectDetailAsync(Guid projectId)
+        public async Task<ProjectDetailDto> GetProjectDetailAsync(Guid orgId, Guid projectId, Guid requesterId)
         {
+            await EnsureCanAccessProjectAsync(orgId, projectId, requesterId);
+
             var project = await _projectRepo.GetByIdWithDetailsAsync(projectId);
             if (project == null) throw new InvalidOperationException("Project not found.");
 
@@ -122,8 +133,10 @@ namespace Vertex.Services.Services
 
         // ── Tasks ──────────────────────────────────────────
 
-        public async Task<List<TaskDto>> GetFilteredTasksAsync(Guid projectId, string? status, string? priority, Guid? assigneeId)
+        public async Task<List<TaskDto>> GetFilteredTasksAsync(Guid orgId, Guid projectId, Guid requesterId, string? status, string? priority, Guid? assigneeId)
         {
+            await EnsureCanAccessProjectAsync(orgId, projectId, requesterId);
+
             var tasks = await _projectRepo.GetTasksByProjectIdAsync(projectId);
             var query = tasks.AsQueryable();
 
@@ -220,8 +233,10 @@ namespace Vertex.Services.Services
 
         // ── Members ────────────────────────────────────────
 
-        public async Task<List<ProjectMemberDto>> ListProjectMembersAsync(Guid projectId)
+        public async Task<List<ProjectMemberDto>> ListProjectMembersAsync(Guid orgId, Guid projectId, Guid requesterId)
         {
+            await EnsureCanAccessProjectAsync(orgId, projectId, requesterId);
+
             var project = await _projectRepo.GetByIdWithDetailsAsync(projectId);
             if (project == null) throw new InvalidOperationException("Project not found.");
 
@@ -256,7 +271,7 @@ namespace Vertex.Services.Services
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
                 UserId = user.Id,
-                Role = input.Role,
+                Role = NormalizeNewProjectMemberRole(input.Role),
                 ProjectSkills = input.ProjectSkills?.Trim(),
                 JoinedAt = DateTimeOffset.UtcNow,
             };
@@ -273,7 +288,13 @@ namespace Vertex.Services.Services
             var member = await _projectRepo.GetMemberAsync(projectId, memberId);
             if (member == null) throw new InvalidOperationException("Member not found in the project.");
 
-            member.Role = input.Role;
+            var nextRole = NormalizeProjectMemberRole(input.Role);
+            if (nextRole == "Leader" && member.Role != "Leader")
+                throw new InvalidOperationException("Only the project creator can be Leader.");
+            if (member.Role == "Leader" && nextRole != "Leader")
+                throw new InvalidOperationException("Project creator role cannot be changed here.");
+
+            member.Role = nextRole;
             member.ProjectSkills = input.ProjectSkills?.Trim();
             await _projectRepo.UpdateMemberAsync(member);
 
@@ -302,6 +323,45 @@ namespace Vertex.Services.Services
 
         // ── Helpers ────────────────────────────────────────
 
+        public async Task EnsureCanAccessProjectAsync(Guid orgId, Guid projectId, Guid requesterId)
+        {
+            var orgMember = await EnsureOrgMemberAsync(orgId, requesterId);
+            var project = await _projectRepo.GetByIdAsync(projectId);
+            if (project == null) throw new InvalidOperationException("Project not found.");
+            if (project.OrgId != orgId) throw new InvalidOperationException("Project not found in this organization.");
+
+            if (CanSeeAllProjects(orgMember.Role)) return;
+
+            var projectMember = await _projectRepo.GetMemberAsync(projectId, requesterId);
+            if (projectMember == null)
+                throw new UnauthorizedAccessException("You do not have access to this project.");
+        }
+
+        private async Task<OrganizationMember> EnsureOrgMemberAsync(Guid orgId, Guid userId)
+        {
+            var orgMember = await _orgRepo.GetMemberAsync(orgId, userId);
+            if (orgMember == null)
+                throw new UnauthorizedAccessException("You do not have access to this organization.");
+
+            return orgMember;
+        }
+
+
+        private static bool CanSeeAllProjects(string? orgRole)
+        {
+            return string.Equals(orgRole, "owner", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(orgRole, "admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(orgRole, "lecturer", StringComparison.OrdinalIgnoreCase);
+        }
+        private static string NormalizeProjectMemberRole(string? role)
+        {
+            return role == "Guest" || role == "Leader" ? role : "Member";
+        }
+
+        private static string NormalizeNewProjectMemberRole(string? role)
+        {
+            return role == "Guest" ? "Guest" : "Member";
+        }
         private static int ComputeProgress(IEnumerable<ProjectTask> tasks)
         {
             var list = tasks.ToList();

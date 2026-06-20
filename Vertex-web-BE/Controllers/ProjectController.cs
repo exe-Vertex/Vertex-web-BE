@@ -26,14 +26,27 @@ namespace Vertex_web_BE.Controllers
         private Guid GetUserId() =>
             Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+        private Task EnsureCanAccessProjectAsync(Guid orgId, Guid projectId) =>
+            _projectService.EnsureCanAccessProjectAsync(orgId, projectId, GetUserId());
+
+        private static IActionResult Forbidden(UnauthorizedAccessException ex) =>
+            new ObjectResult(new { error = ex.Message }) { StatusCode = StatusCodes.Status403Forbidden };
+
         // ── Projects ───────────────────────────────────────
 
         /// <summary>List all projects in an organization.</summary>
         [HttpGet]
         public async Task<IActionResult> List(Guid orgId)
         {
-            var projects = await _projectService.ListProjectsAsync(orgId);
-            return Ok(projects);
+            try
+            {
+                var projects = await _projectService.ListProjectsAsync(orgId, GetUserId());
+                return Ok(projects);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         /// <summary>Get full project details including tasks and members.</summary>
@@ -42,8 +55,12 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                var detail = await _projectService.GetProjectDetailAsync(projectId);
+                var detail = await _projectService.GetProjectDetailAsync(orgId, projectId, GetUserId());
                 return Ok(detail);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -60,6 +77,10 @@ namespace Vertex_web_BE.Controllers
                 var result = await _projectService.CreateProjectAsync(orgId, GetUserId(), input);
                 return Created($"/api/orgs/{orgId}/projects/{result.Id}", result);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { error = ex.Message });
@@ -72,8 +93,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.UpdateProjectAsync(projectId, input);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -87,8 +113,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.DeleteProjectAsync(projectId);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -107,8 +138,19 @@ namespace Vertex_web_BE.Controllers
             [FromQuery] string? priority = null, 
             [FromQuery] Guid? assigneeId = null)
         {
-            var tasks = await _projectService.GetFilteredTasksAsync(projectId, status, priority, assigneeId);
-            return Ok(tasks);
+            try
+            {
+                var tasks = await _projectService.GetFilteredTasksAsync(orgId, projectId, GetUserId(), status, priority, assigneeId);
+                return Ok(tasks);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
         }
 
         /// <summary>Create a new task in a project.</summary>
@@ -117,8 +159,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.CreateTaskAsync(projectId, input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{result.Id}", result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -132,8 +179,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.UpdateTaskAsync(taskId, input);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -147,8 +199,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.DeleteTaskAsync(taskId);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -164,8 +221,12 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                var members = await _projectService.ListProjectMembersAsync(projectId);
+                var members = await _projectService.ListProjectMembersAsync(orgId, projectId, GetUserId());
                 return Ok(members);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -179,8 +240,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.AddProjectMemberAsync(orgId, projectId, input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/members/{result.Id}", result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -194,8 +260,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.UpdateProjectMemberRoleAsync(projectId, memberId, input);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -209,8 +280,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.RemoveProjectMemberAsync(projectId, memberId);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -225,11 +301,16 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 if (role != "Leader") return Forbid("Only Leader can upload files");
                 var userId = GetUserId();
                 using var stream = file.OpenReadStream();
                 var result = await _fileService.UploadProjectFileAsync(projectId, userId, file.FileName, file.ContentType, file.Length, stream);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -240,8 +321,16 @@ namespace Vertex_web_BE.Controllers
         [HttpGet("{projectId}/files")]
         public async Task<IActionResult> ListFiles(Guid orgId, Guid projectId)
         {
-            var files = await _fileService.GetProjectFilesAsync(projectId);
-            return Ok(files);
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var files = await _fileService.GetProjectFilesAsync(projectId);
+                return Ok(files);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         [HttpDelete("{projectId}/files/{fileId}")]
@@ -250,9 +339,14 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = GetUserId();
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 // Normally you would fetch user's role in the project here, but accepting from query/body as a shortcut for now
                 await _fileService.DeleteProjectFileAsync(projectId, fileId, userId, role);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -266,10 +360,15 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 if (role != "Leader") return Forbid("Only Leader can add links");
                 var userId = GetUserId();
                 var result = await _fileService.AddProjectLinkAsync(projectId, userId, input);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -280,8 +379,16 @@ namespace Vertex_web_BE.Controllers
         [HttpGet("{projectId}/links")]
         public async Task<IActionResult> ListLinks(Guid orgId, Guid projectId)
         {
-            var links = await _fileService.GetProjectLinksAsync(projectId);
-            return Ok(links);
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var links = await _fileService.GetProjectLinksAsync(projectId);
+                return Ok(links);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         [HttpDelete("{projectId}/links/{linkId}")]
@@ -290,8 +397,13 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = GetUserId();
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _fileService.DeleteProjectLinkAsync(projectId, linkId, userId, role);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -307,9 +419,14 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = GetUserId();
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 using var stream = file.OpenReadStream();
                 var result = await _fileService.UploadTaskFileAsync(taskId, userId, file.FileName, file.ContentType, file.Length, stream);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -323,8 +440,13 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = GetUserId();
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _fileService.AddTaskLinkAsync(taskId, userId, input);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -335,8 +457,16 @@ namespace Vertex_web_BE.Controllers
         [HttpGet("{projectId}/tasks/{taskId}/attachments")]
         public async Task<IActionResult> ListTaskAttachments(Guid orgId, Guid projectId, Guid taskId)
         {
-            var attachments = await _fileService.GetTaskAttachmentsAsync(taskId);
-            return Ok(attachments);
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var attachments = await _fileService.GetTaskAttachmentsAsync(taskId);
+                return Ok(attachments);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         [HttpDelete("{projectId}/tasks/{taskId}/attachments/{attachmentId}")]
@@ -345,8 +475,13 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = GetUserId();
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _fileService.DeleteTaskAttachmentAsync(taskId, attachmentId, userId, role);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -359,8 +494,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _fileService.PromoteTaskAttachmentAsync(taskId, attachmentId, projectId, role);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (Exception ex)
             {
@@ -374,8 +514,16 @@ namespace Vertex_web_BE.Controllers
         [HttpGet("{projectId}/tasks/{taskId}/subtasks")]
         public async Task<IActionResult> ListSubtasks(Guid orgId, Guid projectId, Guid taskId)
         {
-            var subtasks = await _projectService.ListSubtasksAsync(taskId);
-            return Ok(subtasks);
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var subtasks = await _projectService.ListSubtasksAsync(taskId);
+                return Ok(subtasks);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         /// <summary>Create a subtask.</summary>
@@ -384,6 +532,7 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.CreateSubtaskAsync(taskId, GetUserId(), input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/subtasks/{result.Id}", result);
             }
@@ -403,6 +552,7 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.UpdateSubtaskAsync(taskId, subtaskId, GetUserId(), input);
                 return Ok(result);
             }
@@ -422,6 +572,7 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.DeleteSubtaskAsync(taskId, subtaskId, GetUserId());
                 return NoContent();
             }
@@ -441,8 +592,16 @@ namespace Vertex_web_BE.Controllers
         [HttpGet("{projectId}/tasks/{taskId}/comments")]
         public async Task<IActionResult> ListComments(Guid orgId, Guid projectId, Guid taskId)
         {
-            var comments = await _projectService.ListCommentsAsync(taskId);
-            return Ok(comments);
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var comments = await _projectService.ListCommentsAsync(taskId);
+                return Ok(comments);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
         }
 
         /// <summary>Add a comment to a task.</summary>
@@ -451,8 +610,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 var result = await _projectService.AddCommentAsync(taskId, GetUserId(), input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/comments/{result.Id}", result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {
@@ -466,8 +630,13 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
                 await _projectService.DeleteCommentAsync(commentId, GetUserId());
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
             }
             catch (InvalidOperationException ex)
             {

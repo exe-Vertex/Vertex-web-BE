@@ -34,13 +34,15 @@ namespace Vertex.Services.Services
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                 .Replace("+", "-").Replace("/", "_").TrimEnd('='); // URL safe token
 
+            var inviteRole = targetType == "Project" && role == "Leader" ? "Member" : role;
+
             var invitation = new Invitation
             {
                 Id = Guid.NewGuid(),
                 Email = email,
                 TargetType = targetType,
                 TargetId = targetId,
-                Role = role,
+                Role = inviteRole,
                 Token = token,
                 Status = "Pending",
                 CreatedBy = creatorId,
@@ -56,7 +58,7 @@ namespace Vertex.Services.Services
             var subject = $"You have been invited to join a {targetType} on Vertex";
             var body = $@"
                 <h3>Hello,</h3>
-                <p>You have been invited to join a {targetType} on Vertex with the role of <strong>{role}</strong>.</p>
+                <p>You have been invited to join a {targetType} on Vertex with the role of <strong>{inviteRole}</strong>.</p>
                 <p>Please click the link below to accept the invitation:</p>
                 <p><a href='{acceptLink}' style='padding: 10px 20px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 5px;'>Accept Invitation</a></p>
                 <p>If you don't have an account yet, you will be asked to sign up first.</p>
@@ -131,7 +133,7 @@ namespace Vertex.Services.Services
                         Id = Guid.NewGuid(),
                         ProjectId = invitation.TargetId,
                         UserId = userId,
-                        Role = invitation.Role,
+                        Role = invitation.Role == "Leader" ? "Member" : invitation.Role,
                         JoinedAt = DateTimeOffset.UtcNow
                     };
                     _context.ProjectMembers.Add(newMember);
