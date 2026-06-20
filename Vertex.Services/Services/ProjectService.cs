@@ -332,13 +332,14 @@ namespace Vertex.Services.Services
             return subtasks.Select(s => new SubtaskDto(s.Id, s.TaskId, s.Title, s.IsCompleted, s.Position)).ToList();
         }
 
-        public async Task<SubtaskDto> CreateSubtaskAsync(Guid taskId, CreateSubtaskInput input)
+        public async Task<SubtaskDto> CreateSubtaskAsync(Guid taskId, Guid userId, CreateSubtaskInput input)
         {
             if (string.IsNullOrWhiteSpace(input.Title))
                 throw new InvalidOperationException("Subtask title is required.");
 
             var task = await _projectRepo.GetTaskByIdAsync(taskId);
             if (task == null) throw new InvalidOperationException("Task not found.");
+            await EnsureCanManageSubtasksAsync(task, userId);
 
             var existing = await _projectRepo.GetSubtasksByTaskIdAsync(taskId);
             var maxPos = existing.Count > 0 ? existing.Max(s => s.Position) : -1;
@@ -356,10 +357,15 @@ namespace Vertex.Services.Services
             return new SubtaskDto(subtask.Id, subtask.TaskId, subtask.Title, subtask.IsCompleted, subtask.Position);
         }
 
-        public async Task<SubtaskDto> UpdateSubtaskAsync(Guid subtaskId, UpdateSubtaskInput input)
+        public async Task<SubtaskDto> UpdateSubtaskAsync(Guid taskId, Guid subtaskId, Guid userId, UpdateSubtaskInput input)
         {
             var subtask = await _projectRepo.GetSubtaskByIdAsync(subtaskId);
             if (subtask == null) throw new InvalidOperationException("Subtask not found.");
+            if (subtask.TaskId != taskId) throw new InvalidOperationException("Subtask does not belong to this task.");
+
+            var task = await _projectRepo.GetTaskByIdAsync(taskId);
+            if (task == null) throw new InvalidOperationException("Task not found.");
+            await EnsureCanManageSubtasksAsync(task, userId);
 
             if (input.Title != null) subtask.Title = input.Title.Trim();
             if (input.IsCompleted.HasValue) subtask.IsCompleted = input.IsCompleted.Value;
@@ -369,14 +375,30 @@ namespace Vertex.Services.Services
             return new SubtaskDto(subtask.Id, subtask.TaskId, subtask.Title, subtask.IsCompleted, subtask.Position);
         }
 
-        public async Task DeleteSubtaskAsync(Guid subtaskId)
+        public async Task DeleteSubtaskAsync(Guid taskId, Guid subtaskId, Guid userId)
         {
             var subtask = await _projectRepo.GetSubtaskByIdAsync(subtaskId);
             if (subtask == null) throw new InvalidOperationException("Subtask not found.");
+            if (subtask.TaskId != taskId) throw new InvalidOperationException("Subtask does not belong to this task.");
+
+            var task = await _projectRepo.GetTaskByIdAsync(taskId);
+            if (task == null) throw new InvalidOperationException("Task not found.");
+            await EnsureCanManageSubtasksAsync(task, userId);
+
             await _projectRepo.DeleteSubtaskAsync(subtask);
         }
 
         // ── Comments ────────────────────────────────────────
+
+        private async Task EnsureCanManageSubtasksAsync(ProjectTask task, Guid userId)
+        {
+            if (task.AssigneeId == userId) return;
+
+            var member = await _projectRepo.GetMemberAsync(task.ProjectId, userId);
+            if (member?.Role == "Leader") return;
+
+            throw new UnauthorizedAccessException("Only the task assignee or project Leader can manage subtasks.");
+        }
 
         public async Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid taskId)
         {

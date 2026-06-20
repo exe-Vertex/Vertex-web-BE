@@ -229,5 +229,36 @@ CRITICAL JSON RULES:
 
             return BaseSystemPrompt + contextSection;
         }
+
+        public async Task<string> GenerateSubtasksAsync(Models.GenerateSubtasksRequestDto request)
+        {
+            var systemPrompt = @"You are an expert technical project manager and agile coach.
+Your job is to break down a complex task into smaller, actionable subtasks (a checklist) to help the assignee execute it effectively.
+You MUST output ONLY a valid JSON array of strings. No markdown formatting, no backticks, no introduction, and no extra text.
+Each string should be a concise, actionable subtask. Aim for 3 to 6 subtasks depending on the complexity of the task.
+Example output:
+[\""Design database schema\"", \""Setup Entity Framework migrations\"", \""Create REST API endpoints\""]";
+
+            var promptText = $"Task Title: {request.TaskTitle}\nTask Description: {request.TaskDescription}";
+
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(systemPrompt);
+            chatHistory.AddUserMessage(promptText);
+
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+            
+            _logger.LogInformation("Sending subtask generation request to AI for task: {TaskTitle}", request.TaskTitle);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                new GeminiPromptExecutionSettings
+                {
+                    MaxTokens = 1024,
+                    Temperature = 0.7
+                });
+
+            var resultText = response.Content ?? "[]";
+            resultText = resultText.Replace("```json", "").Replace("```", "").Trim();
+            return resultText;
+        }
     }
 }

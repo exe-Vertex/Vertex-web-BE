@@ -61,5 +61,11 @@ namespace Vertex.Services.Models
         public string? TargetSkills { get; set; }
         public List<string>? CoreSkills { get; set; }
     }
+
+    public class GenerateSubtasksRequestDto
+    {
+        public string TaskTitle { get; set; } = string.Empty;
+        public string TaskDescription { get; set; } = string.Empty;
+    }
 }
 

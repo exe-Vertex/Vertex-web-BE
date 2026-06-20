@@ -27,9 +27,9 @@ namespace Vertex.Services.Interfaces
 
         // Subtasks
         Task<List<SubtaskDto>> ListSubtasksAsync(Guid taskId);
-        Task<SubtaskDto> CreateSubtaskAsync(Guid taskId, CreateSubtaskInput input);
-        Task<SubtaskDto> UpdateSubtaskAsync(Guid subtaskId, UpdateSubtaskInput input);
-        Task DeleteSubtaskAsync(Guid subtaskId);
+        Task<SubtaskDto> CreateSubtaskAsync(Guid taskId, Guid userId, CreateSubtaskInput input);
+        Task<SubtaskDto> UpdateSubtaskAsync(Guid taskId, Guid subtaskId, Guid userId, UpdateSubtaskInput input);
+        Task DeleteSubtaskAsync(Guid taskId, Guid subtaskId, Guid userId);
 
         // Comments
         Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid taskId);

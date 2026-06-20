@@ -90,5 +90,19 @@ namespace Vertex_web_BE.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("generate-subtasks")]
+        public async Task<IActionResult> GenerateSubtasks([FromBody] GenerateSubtasksRequestDto request)
+        {
+            try
+            {
+                var subtasksJson = await _aiService.GenerateSubtasksAsync(request);
+                return Ok(subtasksJson);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

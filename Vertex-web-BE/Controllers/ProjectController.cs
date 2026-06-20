@@ -384,8 +384,12 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                var result = await _projectService.CreateSubtaskAsync(taskId, input);
+                var result = await _projectService.CreateSubtaskAsync(taskId, GetUserId(), input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/subtasks/{result.Id}", result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
@@ -399,8 +403,12 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                var result = await _projectService.UpdateSubtaskAsync(subtaskId, input);
+                var result = await _projectService.UpdateSubtaskAsync(taskId, subtaskId, GetUserId(), input);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
@@ -414,8 +422,12 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                await _projectService.DeleteSubtaskAsync(subtaskId);
+                await _projectService.DeleteSubtaskAsync(taskId, subtaskId, GetUserId());
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
