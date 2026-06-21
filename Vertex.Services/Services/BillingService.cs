@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -126,6 +126,9 @@ namespace Vertex.Services.Services
             if (transaction == null)
                 throw new InvalidOperationException("Payment transaction not found.");
 
+            if (transaction.Status == Pending)
+                await RefreshPendingTransactionFromPayOSAsync(transaction);
+
             if (transaction.Status == Pending && transaction.ExpiredAt <= DateTimeOffset.UtcNow)
             {
                 transaction.Status = Expired;
@@ -134,6 +137,44 @@ namespace Vertex.Services.Services
             }
 
             return ToTransactionResult(transaction);
+        }
+
+        private async Task RefreshPendingTransactionFromPayOSAsync(Vertex.Entities.Billing.PaymentTransaction transaction)
+        {
+            EnsurePayOSConfigured();
+
+            try
+            {
+                var client = CreateClient();
+                var paymentLink = await client.PaymentRequests.GetAsync(transaction.OrderCode);
+                var status = paymentLink.Status.ToString().ToLowerInvariant();
+
+                if (status == Paid)
+                {
+                    await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+
+                    transaction.Status = Paid;
+                    transaction.PaidAt = DateTimeOffset.UtcNow;
+                    transaction.UpdatedAt = DateTimeOffset.UtcNow;
+
+                    await ApplyPaidPlanAsync(transaction);
+                    await _context.SaveChangesAsync();
+                    await dbTransaction.CommitAsync();
+                    return;
+                }
+
+                if (status == "cancelled" || status == "canceled" || status == Expired)
+                {
+                    transaction.Status = status == Expired ? Expired : Failed;
+                    transaction.FailureReason = $"PayOS payment link status: {status}.";
+                    transaction.UpdatedAt = DateTimeOffset.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (PayOSException ex)
+            {
+                _logger.LogWarning(ex, "Could not refresh PayOS payment status for order {OrderCode}.", transaction.OrderCode);
+            }
         }
 
         public async Task<BillingTransactionResult> HandlePayOSWebhookAsync(PayOSWebhookRequest request)

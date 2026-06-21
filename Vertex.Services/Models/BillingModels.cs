@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json.Serialization;
 
 namespace Vertex.Services.Models
@@ -8,8 +8,8 @@ namespace Vertex.Services.Models
         public string ClientId { get; set; } = string.Empty;
         public string ApiKey { get; set; } = string.Empty;
         public string ChecksumKey { get; set; } = string.Empty;
-        public string ReturnUrl { get; set; } = "http://localhost:3000/dashboard";
-        public string CancelUrl { get; set; } = "http://localhost:3000/dashboard";
+        public string ReturnUrl { get; set; } = "http://localhost:5173/dashboard";
+        public string CancelUrl { get; set; } = "http://localhost:5173/dashboard";
         public int CheckoutExpiresMinutes { get; set; } = 30;
     }
 

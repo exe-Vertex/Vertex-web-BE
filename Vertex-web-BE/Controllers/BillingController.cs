@@ -76,6 +76,10 @@ namespace Vertex_web_BE.Controllers
             {
                 return Unauthorized(new { success = false, message = ex.Message });
             }
+            catch (InvalidOperationException ex) when (ex.Message == "Payment transaction not found.")
+            {
+                return Ok(new { success = true, message = "Webhook verified. No matching local transaction for this validation request." });
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { success = false, message = ex.Message });
