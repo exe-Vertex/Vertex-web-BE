@@ -14,5 +14,13 @@
   },
   "GeminiSettings": {
     "ApiKey": "<YOUR_GEMINI_API_KEY_FROM_AISTUDIO>"
+  },
+  "PayOS": {
+    "ClientId": "<YOUR_PAYOS_CLIENT_ID>",
+    "ApiKey": "<YOUR_PAYOS_API_KEY>",
+    "ChecksumKey": "<YOUR_PAYOS_CHECKSUM_KEY>",
+    "ReturnUrl": "http://localhost:3000/dashboard",
+    "CancelUrl": "http://localhost:3000/dashboard",
+    "CheckoutExpiresMinutes": 30
   }
 }

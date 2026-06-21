@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Vertex.Entities.AI;
 using Vertex.Entities.AuditLogs;
 using Vertex.Entities.Auth;
+using Vertex.Entities.Billing;
 using Vertex.Entities.Notifications;
 using Vertex.Entities.Organizations;
 using Vertex.Entities.Projects;
@@ -38,6 +39,7 @@ namespace Vertex.Repositories
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
+        public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -508,6 +510,46 @@ namespace Vertex.Repositories
 
                 entity.HasIndex(x => x.Token).IsUnique();
                 entity.HasIndex(x => new { x.Email, x.TargetId, x.Status });
+            });
+
+            // 21. Payment Transactions
+            modelBuilder.Entity<PaymentTransaction>(entity =>
+            {
+                entity.ToTable("payment_transactions");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.OrgId).HasColumnName("org_id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.OrderCode).HasColumnName("order_code");
+                entity.Property(x => x.PaymentLinkId).HasColumnName("payment_link_id").HasMaxLength(100);
+                entity.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(30).HasDefaultValue("payos");
+                entity.Property(x => x.Plan).HasColumnName("plan").HasMaxLength(20);
+                entity.Property(x => x.BillingCycle).HasColumnName("billing_cycle").HasMaxLength(20);
+                entity.Property(x => x.Amount).HasColumnName("amount");
+                entity.Property(x => x.Currency).HasColumnName("currency").HasMaxLength(10).HasDefaultValue("VND");
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20);
+                entity.Property(x => x.CheckoutUrl).HasColumnName("checkout_url").HasMaxLength(1000);
+                entity.Property(x => x.QrCode).HasColumnName("qr_code");
+                entity.Property(x => x.PayosReference).HasColumnName("payos_reference").HasMaxLength(100);
+                entity.Property(x => x.FailureReason).HasColumnName("failure_reason").HasMaxLength(500);
+                entity.Property(x => x.PaidAt).HasColumnName("paid_at");
+                entity.Property(x => x.ExpiredAt).HasColumnName("expired_at");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(x => x.OrderCode).IsUnique();
+                entity.HasIndex(x => new { x.OrgId, x.Status });
+                entity.HasIndex(x => x.PaymentLinkId);
+
+                entity.HasOne(x => x.Organization)
+                    .WithMany()
+                    .HasForeignKey(x => x.OrgId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }

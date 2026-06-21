@@ -73,6 +73,7 @@ var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("GeminiSettings"));
+builder.Services.Configure<PayOSSettings>(builder.Configuration.GetSection("PayOS"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -120,6 +121,7 @@ builder.Services.AddScoped<ITaskNotifier, SignalRTaskNotifier>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
 
 builder.Services.AddHttpClient();
 
@@ -164,6 +166,33 @@ using (var scope = app.Services.CreateScope())
         db.Database.ExecuteSqlRaw("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_link VARCHAR(2000);");
         db.Database.ExecuteSqlRaw("ALTER TABLE project_members ADD COLUMN IF NOT EXISTS project_skills VARCHAR(500) NULL;");
         db.Database.ExecuteSqlRaw("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_projects INTEGER DEFAULT 3;");
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS payment_transactions (
+                id UUID PRIMARY KEY,
+                org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                user_id UUID NOT NULL REFERENCES users(id),
+                order_code BIGINT NOT NULL UNIQUE,
+                payment_link_id VARCHAR(100) NULL,
+                provider VARCHAR(30) NOT NULL DEFAULT 'payos',
+                plan VARCHAR(20) NOT NULL,
+                billing_cycle VARCHAR(20) NOT NULL,
+                amount BIGINT NOT NULL,
+                currency VARCHAR(10) NOT NULL DEFAULT 'VND',
+                status VARCHAR(20) NOT NULL,
+                checkout_url VARCHAR(1000) NULL,
+                qr_code TEXT NULL,
+                payos_reference VARCHAR(100) NULL,
+                failure_reason VARCHAR(500) NULL,
+                paid_at TIMESTAMPTZ NULL,
+                expired_at TIMESTAMPTZ NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_payment_transactions_org_id_status
+                ON payment_transactions(org_id, status);
+            CREATE INDEX IF NOT EXISTS ix_payment_transactions_payment_link_id
+                ON payment_transactions(payment_link_id);
+        ");
         
         db.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (

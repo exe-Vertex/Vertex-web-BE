@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.30.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.30.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Memory" Version="1.30.0-alpha" />
+    <PackageReference Include="payOS" Version="2.1.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
   </ItemGroup>
 
