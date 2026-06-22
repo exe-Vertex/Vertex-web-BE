@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,6 +26,12 @@ namespace Vertex.Repositories.Repositories
                 .ToListAsync();
         }
 
+
+        public async Task AddAsync(Notification notification)
+        {
+            _dbContext.Notifications.Add(notification);
+            await _dbContext.SaveChangesAsync();
+        }
         public async Task MarkAsReadAsync(Guid id)
         {
             var notification = await _dbContext.Notifications.FindAsync(id);
@@ -44,3 +50,4 @@ namespace Vertex.Repositories.Repositories
         }
     }
 }
+

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Vertex.Services.Models
@@ -36,6 +36,7 @@ namespace Vertex.Services.Models
     // ── Task Comment DTO ─────────────────────────────────────────────
     public record TaskCommentDto(
         Guid Id,
+        Guid TaskId,
         Guid UserId,
         string AuthorName,
         string Role,   // lecturer | student

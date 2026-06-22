@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Vertex.Entities.Notifications;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
 using Vertex.Services.Models;
@@ -97,6 +98,7 @@ namespace Vertex.Services.Services
                 var comments = await _projectRepo.GetCommentsByTaskIdAsync(task.Id);
                 allComments.AddRange(comments.Select(c => new TaskCommentDto(
                     c.Id,
+                    c.TaskId,
                     c.UserId,
                     c.User?.Name ?? "Unknown",
                     c.User?.Role == "lecturer" ? "lecturer" : "student",
@@ -150,10 +152,11 @@ namespace Vertex.Services.Services
         // ── Approve task ──────────────────────────────────────────────
         public async Task ApproveTaskAsync(Guid lecturerId, Guid taskId)
         {
-            var tasks = await FindTaskAndValidate(taskId);
-            tasks.Status = "done";
-            tasks.UpdatedAt = DateTimeOffset.UtcNow;
-            await _projectRepo.UpdateTaskAsync(tasks);
+            var task = await FindTaskAndValidate(taskId);
+            task.Status = "done";
+            task.UpdatedAt = DateTimeOffset.UtcNow;
+            await _projectRepo.UpdateTaskAsync(task);
+            await NotifyAssigneeAsync(task, "success", $"Your task '{task.Title}' was approved by lecturer.");
         }
 
         // ── Request changes ───────────────────────────────────────────
@@ -163,11 +166,13 @@ namespace Vertex.Services.Services
             task.Status = "in-progress";
             task.UpdatedAt = DateTimeOffset.UtcNow;
             await _projectRepo.UpdateTaskAsync(task);
+            await NotifyAssigneeAsync(task, "warning", $"Lecturer requested changes on '{task.Title}'. Check feedback and update the task.");
         }
 
         // ── Add comment ───────────────────────────────────────────────
         public async Task AddCommentAsync(Guid lecturerId, Guid taskId, string content)
         {
+            var task = await FindTaskAndValidate(taskId);
             var comment = new Entities.Projects.TaskComment
             {
                 Id = Guid.NewGuid(),
@@ -178,8 +183,8 @@ namespace Vertex.Services.Services
             };
 
             await _projectRepo.AddCommentAsync(comment);
+            await NotifyAssigneeAsync(task, "info", $"Lecturer left feedback on '{task.Title}'.");
         }
-
         // ── Notifications ─────────────────────────────────────────────
         public async Task<List<NotificationDto>> GetNotificationsAsync(Guid userId)
         {
@@ -213,6 +218,22 @@ namespace Vertex.Services.Services
             return task;
         }
 
+
+        private async Task NotifyAssigneeAsync(Entities.Projects.ProjectTask task, string type, string message)
+        {
+            if (task.AssigneeId == null)
+                return;
+
+            await _notifRepo.AddAsync(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = task.AssigneeId.Value,
+                Type = type,
+                Message = message,
+                IsRead = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
         private static string ComputeReviewStatus(DateOnly deadline, int progress, bool hasPendingReview)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -265,3 +286,4 @@ namespace Vertex.Services.Services
         }
     }
 }
+
