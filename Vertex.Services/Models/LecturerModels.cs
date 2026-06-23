@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Vertex.Services.Models
 {
-    // ── Lecturer Group list item ──────────────────────────────────────
+    // -- Lecturer Group list item --------------------------------------
     public record LecturerGroupDto(
         Guid ProjectId,
         string ProjectName,
@@ -18,10 +18,11 @@ namespace Vertex.Services.Models
         int TasksApproved,
         int TasksInReview,
         int TasksInProgress,
-        int TasksTodo
+        int TasksTodo,
+        List<LecturerTaskDto> ReviewTasks
     );
 
-    // ── Task DTO ─────────────────────────────────────────────────────
+    // -- Task DTO -----------------------------------------------------
     public record LecturerTaskDto(
         Guid Id,
         string Title,
@@ -33,7 +34,7 @@ namespace Vertex.Services.Models
         DateOnly EndDate
     );
 
-    // ── Task Comment DTO ─────────────────────────────────────────────
+    // -- Task Comment DTO ---------------------------------------------
     public record TaskCommentDto(
         Guid Id,
         Guid TaskId,
@@ -44,7 +45,7 @@ namespace Vertex.Services.Models
         DateTimeOffset CreatedAt
     );
 
-    // ── Member contribution ──────────────────────────────────────────
+    // -- Member contribution ------------------------------------------
     public record MemberContributionDto(
         string Name,
         int Assigned,
@@ -55,7 +56,7 @@ namespace Vertex.Services.Models
         int CompletionPercent
     );
 
-    // ── Group detail ─────────────────────────────────────────────────
+    // -- Group detail -------------------------------------------------
     public record LecturerGroupDetailDto(
         Guid ProjectId,
         string ProjectName,
@@ -71,7 +72,7 @@ namespace Vertex.Services.Models
         List<MemberContributionDto> Contributions
     );
 
-    // ── Notification DTO ─────────────────────────────────────────────
+    // -- Notification DTO ---------------------------------------------
     public record NotificationDto(
         Guid Id,
         string Type,

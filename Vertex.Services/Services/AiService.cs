@@ -139,7 +139,7 @@ RESPONSE STYLE:
                 }
             }
 
-            var weeks = Math.Max(2, Math.Min(8, request.DurationWeeks));
+            var weeks = Math.Max(2, Math.Min(24, request.DurationWeeks));
             var systemPrompt = "You are an AI Project Planner for Vertex. Your task is to generate a structured project plan based on the goal, description, team size, duration, difficulty, and available team members with their skills. You MUST respond with ONLY a valid JSON object. Do not include markdown formatting, backticks, or introduction. CRITICAL RULES: 1. Do NOT use raw double quotes inside any JSON string value (use single quotes like 'hero' instead). 2. Do NOT include raw newline characters or carriage returns inside any JSON string values (keep each string value on a single line).";
 
             var promptText = $@"Goal: {request.ProjectGoal}

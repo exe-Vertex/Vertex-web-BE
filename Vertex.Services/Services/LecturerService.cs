@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,7 +25,7 @@ namespace Vertex.Services.Services
             _notifRepo = notifRepo;
         }
 
-        // ── Get all groups for a lecturer ─────────────────────────────
+        // -- Get all groups for a lecturer -----------------------------
         public async Task<List<LecturerGroupDto>> GetGroupsAsync(Guid lecturerId)
         {
             // Find orgs where the lecturer is a member with role 'lecturer'
@@ -59,6 +59,20 @@ namespace Vertex.Services.Services
                         .Select(m => GetInitials(m.User!.Name))
                         .ToList();
 
+                    var reviewTasks = tasks
+                        .Where(t => t.Status == "ready-for-review")
+                        .Select(t => new LecturerTaskDto(
+                            t.Id,
+                            t.Title,
+                            t.Description,
+                            t.Status,
+                            t.Priority,
+                            t.Assignee?.Name,
+                            DateOnly.FromDateTime(t.StartDate),
+                            DateOnly.FromDateTime(t.EndDate)
+                        ))
+                        .ToList();
+
                     results.Add(new LecturerGroupDto(
                         project.Id,
                         project.Name,
@@ -73,7 +87,8 @@ namespace Vertex.Services.Services
                         approved,
                         inReview,
                         inProgress,
-                        todo
+                        todo,
+                        reviewTasks
                     ));
                 }
             }
@@ -81,7 +96,7 @@ namespace Vertex.Services.Services
             return results;
         }
 
-        // ── Get group detail ──────────────────────────────────────────
+        // -- Get group detail ------------------------------------------
         public async Task<LecturerGroupDetailDto> GetGroupDetailAsync(Guid lecturerId, Guid projectId)
         {
             var project = await _projectRepo.GetByIdAsync(projectId);
@@ -151,7 +166,7 @@ namespace Vertex.Services.Services
             );
         }
 
-        // ── Approve task ──────────────────────────────────────────────
+        // -- Approve task ----------------------------------------------
         public async Task ApproveTaskAsync(Guid lecturerId, Guid taskId)
         {
             var task = await FindTaskAndValidate(lecturerId, taskId);
@@ -161,7 +176,7 @@ namespace Vertex.Services.Services
             await NotifyAssigneeAsync(task, "success", $"Your task '{task.Title}' was approved by lecturer.");
         }
 
-        // ── Request changes ───────────────────────────────────────────
+        // -- Request changes -------------------------------------------
         public async Task RequestChangesAsync(Guid lecturerId, Guid taskId)
         {
             var task = await FindTaskAndValidate(lecturerId, taskId);
@@ -171,7 +186,7 @@ namespace Vertex.Services.Services
             await NotifyAssigneeAsync(task, "warning", $"Lecturer requested changes on '{task.Title}'. Check feedback and update the task.");
         }
 
-        // ── Add comment ───────────────────────────────────────────────
+        // -- Add comment -----------------------------------------------
         public async Task AddCommentAsync(Guid lecturerId, Guid taskId, string content)
         {
             var task = await FindTaskAndValidate(lecturerId, taskId);
@@ -187,7 +202,7 @@ namespace Vertex.Services.Services
             await _projectRepo.AddCommentAsync(comment);
             await NotifyAssigneeAsync(task, "info", $"Lecturer left feedback on '{task.Title}'.");
         }
-        // ── Notifications ─────────────────────────────────────────────
+        // -- Notifications ---------------------------------------------
         public async Task<List<NotificationDto>> GetNotificationsAsync(Guid userId)
         {
             var notifications = await _notifRepo.GetByUserIdAsync(userId);
@@ -211,7 +226,7 @@ namespace Vertex.Services.Services
             return _notifRepo.MarkAllAsReadAsync(userId);
         }
 
-        // ── Private helpers ───────────────────────────────────────────
+        // -- Private helpers -------------------------------------------
 
         private async Task<Entities.Projects.ProjectTask> FindTaskAndValidate(Guid actorId, Guid taskId)
         {
