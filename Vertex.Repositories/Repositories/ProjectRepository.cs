@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ namespace Vertex.Repositories.Repositories
             _db = db;
         }
 
-        // ── Projects ───────────────────────────────────────
+        // â”€â”€ Projects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<List<Project>> GetByOrgIdAsync(Guid orgId)
         {
@@ -62,12 +62,13 @@ namespace Vertex.Repositories.Repositories
             await _db.SaveChangesAsync();
         }
 
-        // ── Tasks ──────────────────────────────────────────
+        // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<ProjectTask?> GetTaskByIdAsync(Guid taskId)
         {
             return _db.ProjectTasks
                 .Include(t => t.Assignee)
+                .Include(t => t.Project)
                 .FirstOrDefaultAsync(t => t.Id == taskId);
         }
 
@@ -98,7 +99,7 @@ namespace Vertex.Repositories.Repositories
             return max ?? 0;
         }
 
-        // ── Members ────────────────────────────────────────
+        // â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<ProjectMember?> GetMemberAsync(Guid projectId, Guid userId)
         {
@@ -125,7 +126,7 @@ namespace Vertex.Repositories.Repositories
             await _db.SaveChangesAsync();
         }
 
-        // ── Lecturer Extensions ────────────────────────────
+        // â”€â”€ Lecturer Extensions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<List<ProjectMember>> GetMembersByProjectIdAsync(Guid projectId)
         {
@@ -146,7 +147,7 @@ namespace Vertex.Repositories.Repositories
                 .ToListAsync();
         }
 
-        // ── Subtasks ──────────────────────────────────────
+        // â”€â”€ Subtasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<List<Subtask>> GetSubtasksByTaskIdAsync(Guid taskId)
         {
@@ -180,7 +181,7 @@ namespace Vertex.Repositories.Repositories
             await _db.SaveChangesAsync();
         }
 
-        // ── Comments ──────────────────────────────────────
+        // â”€â”€ Comments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public Task<List<TaskComment>> GetCommentsByTaskIdAsync(Guid taskId)
         {
@@ -210,4 +211,5 @@ namespace Vertex.Repositories.Repositories
         }
     }
 }
+
 

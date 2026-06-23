@@ -34,9 +34,9 @@ namespace Vertex.Services.Services
 
             foreach (var org in orgs)
             {
-                // Check the lecturer role in this org
+                // Organization supervisors can review every project in the org
                 var member = await _orgRepo.GetMemberAsync(org.Id, lecturerId);
-                if (member == null || member.Role != "lecturer")
+                if (member == null || !IsSupervisorRole(member.Role))
                     continue;
 
                 var projects = await _projectRepo.GetByOrgIdAsync(org.Id);
@@ -87,6 +87,8 @@ namespace Vertex.Services.Services
             var project = await _projectRepo.GetByIdAsync(projectId);
             if (project == null)
                 throw new InvalidOperationException("Project not found.");
+
+            await EnsureSupervisorAccessAsync(lecturerId, project.OrgId);
 
             var members = await _projectRepo.GetMembersByProjectIdAsync(projectId);
             var tasks = await _projectRepo.GetTasksByProjectIdAsync(projectId);
@@ -152,7 +154,7 @@ namespace Vertex.Services.Services
         // ── Approve task ──────────────────────────────────────────────
         public async Task ApproveTaskAsync(Guid lecturerId, Guid taskId)
         {
-            var task = await FindTaskAndValidate(taskId);
+            var task = await FindTaskAndValidate(lecturerId, taskId);
             task.Status = "done";
             task.UpdatedAt = DateTimeOffset.UtcNow;
             await _projectRepo.UpdateTaskAsync(task);
@@ -162,7 +164,7 @@ namespace Vertex.Services.Services
         // ── Request changes ───────────────────────────────────────────
         public async Task RequestChangesAsync(Guid lecturerId, Guid taskId)
         {
-            var task = await FindTaskAndValidate(taskId);
+            var task = await FindTaskAndValidate(lecturerId, taskId);
             task.Status = "in-progress";
             task.UpdatedAt = DateTimeOffset.UtcNow;
             await _projectRepo.UpdateTaskAsync(task);
@@ -172,7 +174,7 @@ namespace Vertex.Services.Services
         // ── Add comment ───────────────────────────────────────────────
         public async Task AddCommentAsync(Guid lecturerId, Guid taskId, string content)
         {
-            var task = await FindTaskAndValidate(taskId);
+            var task = await FindTaskAndValidate(lecturerId, taskId);
             var comment = new Entities.Projects.TaskComment
             {
                 Id = Guid.NewGuid(),
@@ -198,11 +200,12 @@ namespace Vertex.Services.Services
             )).ToList();
         }
 
-        public Task MarkNotificationReadAsync(Guid userId, Guid notificationId)
+        public async Task MarkNotificationReadAsync(Guid userId, Guid notificationId)
         {
-            return _notifRepo.MarkAsReadAsync(notificationId);
+            var ownsNotification = (await _notifRepo.GetByUserIdAsync(userId)).Any(n => n.Id == notificationId);
+            if (ownsNotification)
+                await _notifRepo.MarkAsReadAsync(notificationId);
         }
-
         public Task MarkAllNotificationsReadAsync(Guid userId)
         {
             return _notifRepo.MarkAllAsReadAsync(userId);
@@ -210,15 +213,32 @@ namespace Vertex.Services.Services
 
         // ── Private helpers ───────────────────────────────────────────
 
-        private async Task<Entities.Projects.ProjectTask> FindTaskAndValidate(Guid taskId)
+        private async Task<Entities.Projects.ProjectTask> FindTaskAndValidate(Guid actorId, Guid taskId)
         {
             var task = await _projectRepo.GetTaskByIdAsync(taskId);
             if (task == null)
                 throw new InvalidOperationException("Task not found.");
+
+            if (task.Project == null)
+                throw new InvalidOperationException("Task project not found.");
+
+            await EnsureSupervisorAccessAsync(actorId, task.Project.OrgId);
             return task;
         }
 
+        private async Task EnsureSupervisorAccessAsync(Guid userId, Guid orgId)
+        {
+            var member = await _orgRepo.GetMemberAsync(orgId, userId);
+            if (member == null || !IsSupervisorRole(member.Role))
+                throw new UnauthorizedAccessException("Only organization owners, admins, or lecturers can review this project.");
+        }
 
+        private static bool IsSupervisorRole(string? role)
+        {
+            return string.Equals(role, "owner", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, "lecturer", StringComparison.OrdinalIgnoreCase);
+        }
         private async Task NotifyAssigneeAsync(Entities.Projects.ProjectTask task, string type, string message)
         {
             if (task.AssigneeId == null)
@@ -286,4 +306,6 @@ namespace Vertex.Services.Services
         }
     }
 }
+
+
 

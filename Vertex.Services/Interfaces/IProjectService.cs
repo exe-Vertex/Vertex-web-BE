@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Vertex.Services.Models;
@@ -33,8 +33,9 @@ namespace Vertex.Services.Interfaces
         Task DeleteSubtaskAsync(Guid taskId, Guid subtaskId, Guid userId);
 
         // Comments
-        Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid taskId);
-        Task<ProjectTaskCommentDto> AddCommentAsync(Guid taskId, Guid userId, CreateTaskCommentInput input);
-        Task DeleteCommentAsync(Guid commentId, Guid userId);
+        Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid projectId, Guid taskId);
+        Task<ProjectTaskCommentDto> AddCommentAsync(Guid projectId, Guid taskId, Guid userId, CreateTaskCommentInput input);
+        Task DeleteCommentAsync(Guid projectId, Guid taskId, Guid commentId, Guid userId);
     }
 }
+

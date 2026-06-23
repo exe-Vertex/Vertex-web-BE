@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -32,7 +32,7 @@ namespace Vertex_web_BE.Controllers
         private static IActionResult Forbidden(UnauthorizedAccessException ex) =>
             new ObjectResult(new { error = ex.Message }) { StatusCode = StatusCodes.Status403Forbidden };
 
-        // ── Projects ───────────────────────────────────────
+        // â”€â”€ Projects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>List all projects in an organization.</summary>
         [HttpGet]
@@ -127,7 +127,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Tasks ──────────────────────────────────────────
+        // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>Get filtered tasks of a project.</summary>
         [HttpGet("{projectId}/tasks")]
@@ -213,7 +213,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Members ────────────────────────────────────────
+        // â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>List members of a project.</summary>
         [HttpGet("{projectId}/members")]
@@ -294,7 +294,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Files ──────────────────────────────────────────
+        // â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [HttpPost("{projectId}/files")]
         public async Task<IActionResult> UploadFile(Guid orgId, Guid projectId, IFormFile file, [FromQuery] string role = "Member")
@@ -353,7 +353,7 @@ namespace Vertex_web_BE.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
-        // ── Links ──────────────────────────────────────────
+        // â”€â”€ Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [HttpPost("{projectId}/links")]
         public async Task<IActionResult> AddLink(Guid orgId, Guid projectId, [FromBody] CreateProjectLinkInput input, [FromQuery] string role = "Member")
@@ -411,7 +411,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Task Attachments ───────────────────────────────────────
+        // â”€â”€ Task Attachments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         [HttpPost("{projectId}/tasks/{taskId}/attachments/file")]
         public async Task<IActionResult> UploadTaskFile(Guid orgId, Guid projectId, Guid taskId, IFormFile file)
@@ -508,7 +508,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Subtasks ──────────────────────────────────────
+        // â”€â”€ Subtasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>List subtasks for a task.</summary>
         [HttpGet("{projectId}/tasks/{taskId}/subtasks")]
@@ -586,7 +586,7 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
-        // ── Task Comments ─────────────────────────────────
+        // â”€â”€ Task Comments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>List comments on a task.</summary>
         [HttpGet("{projectId}/tasks/{taskId}/comments")]
@@ -595,7 +595,7 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 await EnsureCanAccessProjectAsync(orgId, projectId);
-                var comments = await _projectService.ListCommentsAsync(taskId);
+                var comments = await _projectService.ListCommentsAsync(projectId, taskId);
                 return Ok(comments);
             }
             catch (UnauthorizedAccessException ex)
@@ -611,7 +611,7 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 await EnsureCanAccessProjectAsync(orgId, projectId);
-                var result = await _projectService.AddCommentAsync(taskId, GetUserId(), input);
+                var result = await _projectService.AddCommentAsync(projectId, taskId, GetUserId(), input);
                 return Created($"/api/orgs/{orgId}/projects/{projectId}/tasks/{taskId}/comments/{result.Id}", result);
             }
             catch (UnauthorizedAccessException ex)
@@ -631,7 +631,7 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 await EnsureCanAccessProjectAsync(orgId, projectId);
-                await _projectService.DeleteCommentAsync(commentId, GetUserId());
+                await _projectService.DeleteCommentAsync(projectId, taskId, commentId, GetUserId());
                 return NoContent();
             }
             catch (UnauthorizedAccessException ex)
@@ -645,4 +645,5 @@ namespace Vertex_web_BE.Controllers
         }
     }
 }
+
 

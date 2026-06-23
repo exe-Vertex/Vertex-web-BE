@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -33,7 +33,7 @@ namespace Vertex.Services.Services
             _taskNotifier = taskNotifier;
         }
 
-        // ── Projects ───────────────────────────────────────
+        // â”€â”€ Projects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public async Task<ProjectSummaryDto> CreateProjectAsync(Guid orgId, Guid creatorId, CreateProjectInput input)
         {
@@ -48,7 +48,7 @@ namespace Vertex.Services.Services
 
             var currentProjects = await _projectRepo.GetByOrgIdAsync(orgId);
             if (currentProjects.Count >= org.MaxProjects)
-                throw new InvalidOperationException($"Tổ chức của bạn đã đạt giới hạn tối đa {org.MaxProjects} dự án. Vui lòng nâng cấp gói để tạo thêm.");
+                throw new InvalidOperationException($"Tá»• chá»©c cá»§a báº¡n Ä‘Ã£ Ä‘áº¡t giá»›i háº¡n tá»‘i Ä‘a {org.MaxProjects} dá»± Ã¡n. Vui lÃ²ng nÃ¢ng cáº¥p gÃ³i Ä‘á»ƒ táº¡o thÃªm.");
 
             var now = DateTimeOffset.UtcNow;
             var project = new Project
@@ -131,7 +131,7 @@ namespace Vertex.Services.Services
             await _projectRepo.DeleteAsync(project);
         }
 
-        // ── Tasks ──────────────────────────────────────────
+        // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public async Task<List<TaskDto>> GetFilteredTasksAsync(Guid orgId, Guid projectId, Guid requesterId, string? status, string? priority, Guid? assigneeId)
         {
@@ -231,7 +231,7 @@ namespace Vertex.Services.Services
             await _taskNotifier.NotifyTaskDeletedAsync(projectId, taskId);
         }
 
-        // ── Members ────────────────────────────────────────
+        // â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public async Task<List<ProjectMemberDto>> ListProjectMembersAsync(Guid orgId, Guid projectId, Guid requesterId)
         {
@@ -321,7 +321,7 @@ namespace Vertex.Services.Services
             await _projectRepo.RemoveMemberAsync(member);
         }
 
-        // ── Helpers ────────────────────────────────────────
+        // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public async Task EnsureCanAccessProjectAsync(Guid orgId, Guid projectId, Guid requesterId)
         {
@@ -384,7 +384,7 @@ namespace Vertex.Services.Services
             m.User?.AvatarUrl ?? "", m.Role, m.ProjectSkills
         );
 
-        // ── Subtasks ────────────────────────────────────────
+        // â”€â”€ Subtasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public async Task<List<SubtaskDto>> ListSubtasksAsync(Guid taskId)
         {
@@ -448,7 +448,7 @@ namespace Vertex.Services.Services
             await _projectRepo.DeleteSubtaskAsync(subtask);
         }
 
-        // ── Comments ────────────────────────────────────────
+        // â”€â”€ Comments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private async Task EnsureCanManageSubtasksAsync(ProjectTask task, Guid userId)
         {
@@ -460,8 +460,9 @@ namespace Vertex.Services.Services
             throw new UnauthorizedAccessException("Only the task assignee or project Leader can manage subtasks.");
         }
 
-        public async Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid taskId)
+        public async Task<List<ProjectTaskCommentDto>> ListCommentsAsync(Guid projectId, Guid taskId)
         {
+            await EnsureTaskBelongsToProjectAsync(projectId, taskId);
             var comments = await _projectRepo.GetCommentsByTaskIdAsync(taskId);
             return comments.Select(c => new ProjectTaskCommentDto(
                 c.Id, c.TaskId, c.UserId,
@@ -470,13 +471,12 @@ namespace Vertex.Services.Services
             )).ToList();
         }
 
-        public async Task<ProjectTaskCommentDto> AddCommentAsync(Guid taskId, Guid userId, CreateTaskCommentInput input)
+        public async Task<ProjectTaskCommentDto> AddCommentAsync(Guid projectId, Guid taskId, Guid userId, CreateTaskCommentInput input)
         {
             if (string.IsNullOrWhiteSpace(input.Content))
                 throw new InvalidOperationException("Comment content is required.");
 
-            var task = await _projectRepo.GetTaskByIdAsync(taskId);
-            if (task == null) throw new InvalidOperationException("Task not found.");
+            await EnsureTaskBelongsToProjectAsync(projectId, taskId);
 
             var comment = new TaskComment
             {
@@ -497,13 +497,22 @@ namespace Vertex.Services.Services
             );
         }
 
-        public async Task DeleteCommentAsync(Guid commentId, Guid userId)
+        public async Task DeleteCommentAsync(Guid projectId, Guid taskId, Guid commentId, Guid userId)
         {
+            await EnsureTaskBelongsToProjectAsync(projectId, taskId);
             var comment = await _projectRepo.GetCommentByIdAsync(commentId);
             if (comment == null) throw new InvalidOperationException("Comment not found.");
+            if (comment.TaskId != taskId) throw new InvalidOperationException("Comment not found for this task.");
             if (comment.UserId != userId)
                 throw new InvalidOperationException("You can only delete your own comments.");
             await _projectRepo.DeleteCommentAsync(comment);
+        }
+
+        private async Task EnsureTaskBelongsToProjectAsync(Guid projectId, Guid taskId)
+        {
+            var task = await _projectRepo.GetTaskByIdAsync(taskId);
+            if (task == null || task.ProjectId != projectId)
+                throw new InvalidOperationException("Task not found in this project.");
         }
     }
 }

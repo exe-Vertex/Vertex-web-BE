@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -41,6 +41,10 @@ namespace Vertex_web_BE.Controllers
                 var detail = await _lecturerService.GetGroupDetailAsync(userId, projectId);
                 return Ok(detail);
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
             catch (InvalidOperationException ex)
             {
                 return NotFound(new { message = ex.Message });
@@ -56,6 +60,10 @@ namespace Vertex_web_BE.Controllers
                 var userId = GetUserId();
                 await _lecturerService.ApproveTaskAsync(userId, taskId);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (InvalidOperationException ex)
             {
@@ -73,6 +81,10 @@ namespace Vertex_web_BE.Controllers
                 await _lecturerService.RequestChangesAsync(userId, taskId);
                 return NoContent();
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -88,6 +100,10 @@ namespace Vertex_web_BE.Controllers
                 var userId = GetUserId();
                 await _lecturerService.AddCommentAsync(userId, taskId, request.Content);
                 return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (InvalidOperationException ex)
             {
@@ -122,7 +138,7 @@ namespace Vertex_web_BE.Controllers
             return NoContent();
         }
 
-        // ── Helper ─────────────────────────────────────────
+        // â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private Guid GetUserId()
         {
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -133,9 +149,10 @@ namespace Vertex_web_BE.Controllers
         }
     }
 
-    // ── Request models ────────────────────────────────────
+    // â”€â”€ Request models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public class AddCommentRequest
     {
         public string Content { get; set; } = string.Empty;
     }
 }
+
