@@ -140,18 +140,21 @@ RESPONSE STYLE:
             }
 
             var weeks = Math.Max(2, Math.Min(24, request.DurationWeeks));
+            var categoryText = string.Equals(request.Category, "Auto detect", StringComparison.OrdinalIgnoreCase)
+                ? "Auto detect from the project goal and description"
+                : request.Category;
             var systemPrompt = "You are an AI Project Planner for Vertex. Your task is to generate a structured project plan based on the goal, description, team size, duration, difficulty, and available team members with their skills. You MUST respond with ONLY a valid JSON object. Do not include markdown formatting, backticks, or introduction. CRITICAL RULES: 1. Do NOT use raw double quotes inside any JSON string value (use single quotes like 'hero' instead). 2. Do NOT include raw newline characters or carriage returns inside any JSON string values (keep each string value on a single line).";
 
             var promptText = $@"Goal: {request.ProjectGoal}
 Description: {request.Description}
-Category: {request.Category}
+Project type/category: {categoryText}
 Difficulty: {request.Difficulty}
 Duration: {weeks} weeks
 Team size: {request.TeamSize}
 Available team members:
 {memberDetails}
 
-Generate a project plan and analyze project risks. You MUST respond with ONLY a valid JSON object. No markdown formatting, no backticks, no introduction.
+Generate a project plan and analyze project risks. If project type/category is auto-detected, infer the most suitable type from the goal and description, then tailor milestones, subtasks, terminology, and risks to that type. You MUST respond with ONLY a valid JSON object. No markdown formatting, no backticks, no introduction.
 The JSON must have these exact keys at the top level:
 1. ""plan"": An array of objects (one object per week, max {weeks} objects) where each object represents a week and contains:
    - week: string (e.g. ""Week 1"")
