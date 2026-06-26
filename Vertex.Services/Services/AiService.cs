@@ -58,7 +58,7 @@ RESPONSE STYLE:
 
         public async Task<AiHistory> ChatAsync(Guid userId, Guid orgId, string prompt)
         {
-            // === Step 1: RAG — Search Vector Store for relevant project context ===
+            // === Step 1: RAG â€” Search Vector Store for relevant project context ===
             var relevantContext = await _syncService.SearchRelevantContextAsync(orgId, prompt, limit: 3);
             
             // === Step 2: Build system prompt with injected context ===
@@ -140,10 +140,11 @@ RESPONSE STYLE:
             }
 
             var weeks = Math.Max(2, Math.Min(24, request.DurationWeeks));
+            var tasksPerWeek = weeks > 6 ? 2 : 3;
             var categoryText = string.Equals(request.Category, "Auto detect", StringComparison.OrdinalIgnoreCase)
                 ? "Auto detect from the project goal and description"
                 : request.Category;
-            var systemPrompt = "You are an AI Project Planner for Vertex. Your task is to generate a structured project plan based on the goal, description, team size, duration, difficulty, and available team members with their skills. You MUST respond with ONLY a valid JSON object. Do not include markdown formatting, backticks, or introduction. CRITICAL RULES: 1. Do NOT use raw double quotes inside any JSON string value (use single quotes like 'hero' instead). 2. Do NOT include raw newline characters or carriage returns inside any JSON string values (keep each string value on a single line).";
+            var systemPrompt = "You are an AI Project Planner for Vertex. Generate compact, valid JSON only. Do not include markdown formatting, backticks, or introduction. Keep the response small enough to avoid truncation. CRITICAL RULES: 1. Do NOT use raw double quotes inside any JSON string value (use single quotes like 'hero' instead). 2. Do NOT include raw newline characters or carriage returns inside any JSON string values. 3. Keep every description under 120 characters.";
 
             var promptText = $@"Goal: {request.ProjectGoal}
 Description: {request.Description}
@@ -159,19 +160,20 @@ The JSON must have these exact keys at the top level:
 1. ""plan"": An array of objects (one object per week, max {weeks} objects) where each object represents a week and contains:
    - week: string (e.g. ""Week 1"")
    - milestone: string (a concise summary of the week's milestone, e.g. ""Database Schema and Backend Setup"")
-   - subtasks: An array of objects, where each object represents an individual actionable task (2 to 5 tasks per week) containing:
+   - subtasks: An array of objects, exactly {tasksPerWeek} actionable tasks per week containing:
      - title: string (short, clear, actionable task title, e.g. ""Create user registration API"")
-     - description: string (detailed explanation of the task, what needs to be done, requirements, etc. Keep on a single line, no newlines)
+     - description: string (max 120 characters, concrete, single line, no newlines)
      - assignee: string (must be one of the available team members' exact name, or ""Unassigned"". Assign tasks logically based on their skills)
      - estHours: number (estimated effort in hours, e.g. 6. Estimate realistically based on difficulty and task scope, NOT a flat 40h)
      - priority: string (must be ""High"", ""Medium"", or ""Low"")
-2. ""risks"": An array of strings containing 2 to 4 project-specific risks analyzed from the description, category, difficulty, duration, and team constraints (e.g. ""Potential delay in Figma design approval due to short timeline"").
+2. ""risks"": An array of strings containing exactly 2 short project-specific risks, max 120 characters each.
 
 CRITICAL JSON RULES:
 1. Do NOT output any markdown tags (like ```json or ```).
 2. Do NOT output any text before or after the JSON object.
 3. If you write quotes inside string values (such as in description or title), use single quotes (e.g. 'database') instead of double quotes to prevent breaking the JSON parser.
-4. Do NOT include raw newline characters or carriage returns inside any JSON string values. Every string value must be strictly on a single line.";
+4. Do NOT include raw newline characters or carriage returns inside any JSON string values. Every string value must be strictly on a single line.
+5. Keep descriptions concise. Prefer fewer words over detailed explanations so the JSON is never truncated.";
 
 
 
@@ -186,8 +188,8 @@ CRITICAL JSON RULES:
                 chatHistory,
                 new GeminiPromptExecutionSettings
                 {
-                    MaxTokens = 8192,
-                    Temperature = 0.5
+                    MaxTokens = 12000,
+                    Temperature = 0.2
                 });
 
             var resultText = response.Content ?? "{\"plan\":[],\"risks\":[]}";
