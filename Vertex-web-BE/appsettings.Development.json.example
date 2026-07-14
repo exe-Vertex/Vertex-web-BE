@@ -7,6 +7,14 @@
   "Jwt": {
     "Key": "<YOUR_JWT_SECRET_KEY_AT_LEAST_32_CHARS>"
   },
+  "Cors": {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ]
+  },
   "EmailSettings": {
     "SenderEmail": "<YOUR_EMAIL>@gmail.com",
     "Username": "<YOUR_EMAIL>@gmail.com",
