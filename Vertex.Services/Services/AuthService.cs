@@ -15,17 +15,20 @@ namespace Vertex.Services.Services
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly ITokenService _tokenService;
         private readonly IOrganizationService _orgService;
+        private readonly IExternalAuthProvider _externalAuthProvider;
 
         public AuthService(
             IUserRepository userRepository,
             IRefreshTokenRepository refreshTokenRepository,
             ITokenService tokenService,
-            IOrganizationService orgService)
+            IOrganizationService orgService,
+            IExternalAuthProvider externalAuthProvider)
         {
             _userRepository = userRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _tokenService = tokenService;
             _orgService = orgService;
+            _externalAuthProvider = externalAuthProvider;
         }
 
         public async Task<AuthTokens> RegisterAsync(RegisterInput input)
@@ -43,6 +46,7 @@ namespace Vertex.Services.Services
                 Name = input.Name,
                 Email = input.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(input.Password),
+                AuthProvider = "local",
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -65,6 +69,64 @@ namespace Vertex.Services.Services
             if (user == null || !BCrypt.Net.BCrypt.Verify(input.Password, user.PasswordHash))
             {
                 throw new UnauthorizedAccessException("Invalid email or password.");
+            }
+
+            var result = _tokenService.GenerateTokens(user);
+            await SaveRefreshTokenAsync(user.Id, result.Tokens, result.RefreshTokenHash);
+
+            return result.Tokens;
+        }
+
+        public async Task<AuthTokens> ExternalLoginAsync(ExternalLoginInput input)
+        {
+            var provider = input.Provider.ToLowerInvariant();
+
+            // 1. Verify token with external provider → get user info
+            var externalInfo = await _externalAuthProvider.VerifyTokenAsync(provider, input.Token);
+
+            // 2. Try to find existing user by ExternalId + Provider
+            var user = await _userRepository.GetByExternalIdAsync(provider, externalInfo.ExternalId);
+
+            if (user == null)
+            {
+                // 3. Try to find by email (link account if exists)
+                user = await _userRepository.GetByEmailAsync(externalInfo.Email);
+
+                if (user != null)
+                {
+                    // Link existing account with this OAuth provider
+                    user.AuthProvider = provider;
+                    user.ExternalId = externalInfo.ExternalId;
+                    if (!string.IsNullOrEmpty(externalInfo.AvatarUrl) && string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        user.AvatarUrl = externalInfo.AvatarUrl;
+                    }
+                    user.UpdatedAt = DateTimeOffset.UtcNow;
+                    await _userRepository.UpdateAsync(user);
+                }
+                else
+                {
+                    // 4. Create new user (no password)
+                    var now = DateTimeOffset.UtcNow;
+                    user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = externalInfo.Name,
+                        Email = externalInfo.Email,
+                        PasswordHash = string.Empty,
+                        AuthProvider = provider,
+                        ExternalId = externalInfo.ExternalId,
+                        AvatarUrl = externalInfo.AvatarUrl ?? string.Empty,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+
+                    await _userRepository.AddAsync(user);
+
+                    // Auto-create a default organization for the new user
+                    var orgSlug = user.Name.ToLower().Trim().Replace(" ", "-") + "-workspace";
+                    await _orgService.CreateOrgAsync(user.Id, new CreateOrgInput($"{user.Name}'s Workspace", orgSlug));
+                }
             }
 
             var result = _tokenService.GenerateTokens(user);

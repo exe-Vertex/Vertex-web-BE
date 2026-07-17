@@ -20,6 +20,12 @@ namespace Vertex.Repositories.Repositories
             return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Email == email);
         }
 
+        public Task<User?> GetByExternalIdAsync(string provider, string externalId)
+        {
+            return _dbContext.Users.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.AuthProvider == provider && x.ExternalId == externalId);
+        }
+
         public Task<User?> GetByIdAsync(Guid id)
         {
             return _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);

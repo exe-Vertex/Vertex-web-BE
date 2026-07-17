@@ -74,6 +74,7 @@ var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("GeminiSettings"));
 builder.Services.Configure<PayOSSettings>(builder.Configuration.GetSection("PayOS"));
+builder.Services.Configure<ExternalAuthSettings>(builder.Configuration.GetSection("ExternalAuth"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -112,6 +113,7 @@ builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAiHistoryRepository, AiHistoryRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IExternalAuthProvider, ExternalAuthProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<ILecturerService, LecturerService>();
@@ -166,6 +168,8 @@ using (var scope = app.Services.CreateScope())
         db.Database.ExecuteSqlRaw("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_link VARCHAR(2000);");
         db.Database.ExecuteSqlRaw("ALTER TABLE project_members ADD COLUMN IF NOT EXISTS project_skills VARCHAR(500) NULL;");
         db.Database.ExecuteSqlRaw("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_projects INTEGER DEFAULT 3;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'local';");
+        db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS external_id VARCHAR(255) NULL;");
         db.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS payment_transactions (
                 id UUID PRIMARY KEY,
@@ -205,6 +209,9 @@ using (var scope = app.Services.CreateScope())
             ON CONFLICT DO NOTHING;
             INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
             VALUES ('20260525095323_AddInvitations', '8.0.0')
+            ON CONFLICT DO NOTHING;
+            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+            VALUES ('20260717024600_AddOAuthFields', '8.0.0')
             ON CONFLICT DO NOTHING;
         ");
 

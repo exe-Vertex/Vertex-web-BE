@@ -52,6 +52,8 @@ namespace Vertex.Repositories
                 entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100);
                 entity.Property(x => x.Email).HasColumnName("email").HasMaxLength(255);
                 entity.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
+                entity.Property(x => x.AuthProvider).HasColumnName("auth_provider").HasMaxLength(20).HasDefaultValue("local");
+                entity.Property(x => x.ExternalId).HasColumnName("external_id").HasMaxLength(255);
                 entity.Property(x => x.AvatarUrl).HasColumnName("avatar_url").HasMaxLength(500);
                 entity.Property(x => x.Role).HasColumnName("role").HasMaxLength(20).HasDefaultValue("member");
                 entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20);

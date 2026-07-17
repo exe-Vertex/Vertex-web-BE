@@ -9,6 +9,8 @@ namespace Vertex.Entities.Users
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
+        public string AuthProvider { get; set; } = "local"; // local | google | github
+        public string? ExternalId { get; set; } // Google/GitHub user ID
         public string AvatarUrl { get; set; } = string.Empty;
         public string Role { get; set; } = "member"; // member | lecturer | admin (system-level)
         public string Status { get; set; } = "active";
