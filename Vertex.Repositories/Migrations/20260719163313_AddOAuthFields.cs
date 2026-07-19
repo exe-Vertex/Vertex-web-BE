@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -29,8 +29,13 @@ namespace Vertex.Repositories.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "auth_provider", table: "users");
-            migrationBuilder.DropColumn(name: "external_id", table: "users");
+            migrationBuilder.DropColumn(
+                name: "auth_provider",
+                table: "users");
+
+            migrationBuilder.DropColumn(
+                name: "external_id",
+                table: "users");
         }
     }
 }
