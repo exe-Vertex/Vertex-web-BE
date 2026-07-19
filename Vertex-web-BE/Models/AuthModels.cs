@@ -50,4 +50,13 @@ namespace Vertex_web_BE.Models
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
     }
+
+    public class ExternalLoginRequest
+    {
+        [Required(ErrorMessage = "Provider không được để trống.")]
+        public string Provider { get; set; } = string.Empty; // "google" | "github"
+
+        [Required(ErrorMessage = "Token không được để trống.")]
+        public string Token { get; set; } = string.Empty;
+    }
 }

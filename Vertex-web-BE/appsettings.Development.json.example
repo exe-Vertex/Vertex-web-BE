@@ -1,4 +1,4 @@
-﻿{
+{
   "// HƯỚNG DẪN": "Copy file này thành appsettings.Development.json rồi điền thông tin thật vào",
 
   "ConnectionStrings": {
@@ -30,5 +30,14 @@
     "ReturnUrl": "http://localhost:5173/dashboard",
     "CancelUrl": "http://localhost:5173/dashboard",
     "CheckoutExpiresMinutes": 30
+  },
+  "ExternalAuth": {
+    "Google": {
+      "ClientId": "<YOUR_GOOGLE_OAUTH_CLIENT_ID>"
+    },
+    "GitHub": {
+      "ClientId": "<YOUR_GITHUB_OAUTH_CLIENT_ID>",
+      "ClientSecret": "<YOUR_GITHUB_OAUTH_CLIENT_SECRET>"
+    }
   }
 }

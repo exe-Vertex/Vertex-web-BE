@@ -56,6 +56,25 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
+        [HttpPost("external-login")]
+        public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginRequest request)
+        {
+            try
+            {
+                var tokens = await _authService.ExternalLoginAsync(
+                    new ExternalLoginInput(request.Provider, request.Token));
+                return Ok(ToAuthResponse(tokens));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> Me()

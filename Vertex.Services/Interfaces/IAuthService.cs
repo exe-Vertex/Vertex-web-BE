@@ -8,6 +8,7 @@ namespace Vertex.Services.Interfaces
     {
         Task<AuthTokens> RegisterAsync(RegisterInput input);
         Task<AuthTokens> LoginAsync(LoginInput input);
+        Task<AuthTokens> ExternalLoginAsync(ExternalLoginInput input);
         Task<AuthUser> GetMeAsync(Guid userId);
         Task<AuthTokens> RefreshAsync(string refreshToken);
         Task LogoutAsync(string refreshToken);

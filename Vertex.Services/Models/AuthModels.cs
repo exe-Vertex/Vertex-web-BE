@@ -16,4 +16,8 @@ namespace Vertex.Services.Models
     public record LoginInput(string Email, string Password);
 
     public record TokenGenerationResult(AuthTokens Tokens, string RefreshTokenHash);
+
+    public record ExternalLoginInput(string Provider, string Token);
+
+    public record ExternalUserInfo(string ExternalId, string Email, string Name, string? AvatarUrl);
 }
