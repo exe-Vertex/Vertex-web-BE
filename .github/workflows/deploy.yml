@@ -1,0 +1,115 @@
+name: Backend CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: vertex-backend-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Vertex-web-BE.sln
+
+      - name: Build
+        run: dotnet build Vertex-web-BE.sln --configuration Release --no-restore
+
+      - name: Publish
+        run: >
+          dotnet publish Vertex-web-BE/Vertex-web-BE.csproj
+          --configuration Release
+          --no-restore
+          --output "$RUNNER_TEMP/publish"
+
+      - name: Create deployment bundle
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        working-directory: ${{ runner.temp }}/publish
+        run: zip -r "$RUNNER_TEMP/vertex-backend.zip" .
+
+      - name: Configure AWS credentials
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Prepare deployment metadata
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          echo "VERSION_LABEL=github-${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+          echo "S3_KEY=vertex-backend/github-${GITHUB_SHA::12}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload deployment bundle
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: >
+          aws s3 cp "$RUNNER_TEMP/vertex-backend.zip"
+          "s3://${{ vars.EB_ARTIFACT_BUCKET }}/${S3_KEY}"
+
+      - name: Create Elastic Beanstalk application version
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: >
+          aws elasticbeanstalk create-application-version
+          --application-name "${{ vars.EB_APPLICATION_NAME }}"
+          --version-label "${VERSION_LABEL}"
+          --description "GitHub Actions commit ${GITHUB_SHA}"
+          --source-bundle
+          "S3Bucket=${{ vars.EB_ARTIFACT_BUCKET }},S3Key=${S3_KEY}"
+
+      - name: Deploy Elastic Beanstalk application version
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: >
+          aws elasticbeanstalk update-environment
+          --environment-name "${{ vars.EB_ENVIRONMENT_NAME }}"
+          --version-label "${VERSION_LABEL}"
+
+      - name: Wait for Elastic Beanstalk
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: >
+          aws elasticbeanstalk wait environment-updated
+          --environment-names "${{ vars.EB_ENVIRONMENT_NAME }}"
+
+      - name: Verify environment health
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          STATUS="$(aws elasticbeanstalk describe-environments \
+            --environment-names "${{ vars.EB_ENVIRONMENT_NAME }}" \
+            --query "Environments[0].Status" \
+            --output text)"
+          HEALTH="$(aws elasticbeanstalk describe-environments \
+            --environment-names "${{ vars.EB_ENVIRONMENT_NAME }}" \
+            --query "Environments[0].Health" \
+            --output text)"
+          echo "Elastic Beanstalk status: ${STATUS}, health: ${HEALTH}"
+          test "${STATUS}" = "Ready"
+          test "${HEALTH}" = "Green"
+
+      - name: Smoke test production API
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          HTTP_STATUS="$(curl --silent --show-error \
+            --output /dev/null \
+            --write-out "%{http_code}" \
+            https://api.vertex.io.vn/api/auth/me)"
+          echo "Protected API returned HTTP ${HTTP_STATUS}"
+          test "${HTTP_STATUS}" = "401"
