@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,11 +6,25 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Vertex.Repositories.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPaymentTransactions : Migration
+    public partial class SyncCurrentSchemaForRds : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "project_skills",
+                table: "project_members",
+                type: "character varying(500)",
+                maxLength: 500,
+                nullable: true);
+
+            migrationBuilder.AddColumn<int>(
+                name: "max_projects",
+                table: "organizations",
+                type: "integer",
+                nullable: false,
+                defaultValue: 3);
+
             migrationBuilder.CreateTable(
                 name: "payment_transactions",
                 columns: table => new
@@ -76,7 +90,16 @@ namespace Vertex.Repositories.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "payment_transactions");
+            migrationBuilder.DropTable(
+                name: "payment_transactions");
+
+            migrationBuilder.DropColumn(
+                name: "project_skills",
+                table: "project_members");
+
+            migrationBuilder.DropColumn(
+                name: "max_projects",
+                table: "organizations");
         }
     }
 }

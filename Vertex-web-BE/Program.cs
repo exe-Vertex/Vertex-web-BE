@@ -48,15 +48,27 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+var configuredFrontendOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+var localFrontendOrigins = new[]
+{
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+};
+var frontendOrigins = (builder.Environment.IsDevelopment()
+        ? configuredFrontendOrigins.Concat(localFrontendOrigins)
+        : configuredFrontendOrigins)
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct()
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:3000",
-                "http://127.0.0.1:3000")
+        policy.WithOrigins(frontendOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -127,7 +139,7 @@ builder.Services.AddScoped<IBillingService, BillingService>();
 
 builder.Services.AddHttpClient();
 
-// ── Semantic Kernel + AI Services Registration ──
+// Semantic Kernel + AI Services Registration
 var geminiSettings = builder.Configuration.GetSection("GeminiSettings").Get<GeminiSettings>() ?? new GeminiSettings();
 
 // Build the Semantic Kernel with Google Gemini Chat Completion
@@ -157,71 +169,6 @@ builder.Services.AddScoped<IAiService, AiService>();
 
 
 var app = builder.Build();
-
-// ── Self-Healing Database Initialization ──
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
-    {
-        Console.WriteLine("Running self-healing database check...");
-        db.Database.ExecuteSqlRaw("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_link VARCHAR(2000);");
-        db.Database.ExecuteSqlRaw("ALTER TABLE project_members ADD COLUMN IF NOT EXISTS project_skills VARCHAR(500) NULL;");
-        db.Database.ExecuteSqlRaw("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_projects INTEGER DEFAULT 3;");
-        db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'local';");
-        db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS external_id VARCHAR(255) NULL;");
-        db.Database.ExecuteSqlRaw(@"
-            CREATE TABLE IF NOT EXISTS payment_transactions (
-                id UUID PRIMARY KEY,
-                org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-                user_id UUID NOT NULL REFERENCES users(id),
-                order_code BIGINT NOT NULL UNIQUE,
-                payment_link_id VARCHAR(100) NULL,
-                provider VARCHAR(30) NOT NULL DEFAULT 'payos',
-                plan VARCHAR(20) NOT NULL,
-                billing_cycle VARCHAR(20) NOT NULL,
-                amount BIGINT NOT NULL,
-                currency VARCHAR(10) NOT NULL DEFAULT 'VND',
-                status VARCHAR(20) NOT NULL,
-                checkout_url VARCHAR(1000) NULL,
-                qr_code TEXT NULL,
-                payos_reference VARCHAR(100) NULL,
-                failure_reason VARCHAR(500) NULL,
-                paid_at TIMESTAMPTZ NULL,
-                expired_at TIMESTAMPTZ NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL,
-                updated_at TIMESTAMPTZ NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS ix_payment_transactions_org_id_status
-                ON payment_transactions(org_id, status);
-            CREATE INDEX IF NOT EXISTS ix_payment_transactions_payment_link_id
-                ON payment_transactions(payment_link_id);
-        ");
-        
-        db.Database.ExecuteSqlRaw(@"
-            CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
-                ""MigrationId"" character varying(150) NOT NULL,
-                ""ProductVersion"" character varying(32) NOT NULL,
-                CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
-            );
-            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-            VALUES ('20260524112019_AddSubmissionLinkToTask', '8.0.0')
-            ON CONFLICT DO NOTHING;
-            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-            VALUES ('20260525095323_AddInvitations', '8.0.0')
-            ON CONFLICT DO NOTHING;
-            INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-            VALUES ('20260717024600_AddOAuthFields', '8.0.0')
-            ON CONFLICT DO NOTHING;
-        ");
-
-        Console.WriteLine("✔ Self-healing database check completed successfully.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("⚠ Self-healing database check encountered an error: " + ex.Message);
-    }
-}
 
 // Configure the HTTP request pipeline.
 app.UseMiddleware<Vertex_web_BE.Middlewares.ApiExceptionMiddleware>();
