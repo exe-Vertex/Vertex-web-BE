@@ -136,6 +136,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<IAiQuotaService, AiQuotaService>();
 
 builder.Services.AddHttpClient();
 

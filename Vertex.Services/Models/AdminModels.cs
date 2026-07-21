@@ -47,4 +47,20 @@ namespace Vertex.Services.Models
         int Page,
         int PageSize
     );
+    public record AdminAiUsageDto(
+        Guid Id,
+        Guid UserId,
+        string UserName,
+        string Prompt,
+        string PlanSummary,
+        DateTimeOffset CreatedAt,
+        int UsageUnits
+    );
+
+    public record AdminAiUsageListResult(
+        List<AdminAiUsageDto> Entries,
+        int TotalCount,
+        int Page,
+        int PageSize
+    );
 }

@@ -22,6 +22,7 @@ namespace Vertex.Services.Services
         private readonly Kernel _kernel;
         private readonly IAiHistoryRepository _historyRepository;
         private readonly IAiSyncService _syncService;
+        private readonly IAiQuotaService _quotaService;
         private readonly GeminiSettings _settings;
         private readonly ILogger<AiService> _logger;
 
@@ -47,20 +48,29 @@ RESPONSE STYLE:
             Kernel kernel,
             IAiHistoryRepository historyRepository,
             IAiSyncService syncService,
+            IAiQuotaService quotaService,
             IOptions<GeminiSettings> settings,
             ILogger<AiService> logger)
         {
             _kernel = kernel;
             _historyRepository = historyRepository;
             _syncService = syncService;
+            _quotaService = quotaService;
             _settings = settings.Value;
             _logger = logger;
         }
 
         public async Task<AiHistory> ChatAsync(Guid userId, Guid orgId, string prompt)
         {
+            if (string.IsNullOrWhiteSpace(prompt))
+                throw new InvalidOperationException("Prompt is required.");
+
+            await _quotaService.ConsumeAsync(userId);
+
             // === Step 1: RAG â€” Search Vector Store for relevant project context ===
-            var relevantContext = await _syncService.SearchRelevantContextAsync(orgId, prompt, limit: 3);
+            var relevantContext = orgId == Guid.Empty
+                ? new List<string>()
+                : await _syncService.SearchRelevantContextAsync(orgId, prompt, limit: 3);
             
             // === Step 2: Build system prompt with injected context ===
             var systemPrompt = BuildSystemPromptWithContext(relevantContext);
@@ -131,6 +141,11 @@ RESPONSE STYLE:
 
         public async Task<string> GeneratePlanAsync(Guid userId, Models.GeneratePlanRequestDto request)
         {
+            if (string.IsNullOrWhiteSpace(request.ProjectGoal))
+                throw new InvalidOperationException("Project goal is required.");
+
+            await _quotaService.ConsumeAsync(userId);
+
             var memberDetails = new StringBuilder();
             if (request.TeamMembers != null)
             {
@@ -288,8 +303,13 @@ CRITICAL JSON RULES:
             return BaseSystemPrompt + contextSection;
         }
 
-        public async Task<string> GenerateSubtasksAsync(Models.GenerateSubtasksRequestDto request)
+        public async Task<string> GenerateSubtasksAsync(Guid userId, Models.GenerateSubtasksRequestDto request)
         {
+            if (string.IsNullOrWhiteSpace(request.TaskTitle))
+                throw new InvalidOperationException("Task title is required.");
+
+            await _quotaService.ConsumeAsync(userId);
+
             var systemPrompt = @"You are an expert technical project manager and agile coach.
 Your job is to break down a complex task into smaller, actionable subtasks (a checklist) to help the assignee execute it effectively.
 You MUST output ONLY a valid JSON array of strings. No markdown formatting, no backticks, no introduction, and no extra text.
@@ -316,6 +336,15 @@ Example output:
 
             var resultText = response.Content ?? "[]";
             resultText = resultText.Replace("```json", "").Replace("```", "").Trim();
+            await _historyRepository.AddAsync(new AiHistory
+            {
+                UserId = userId,
+                Prompt = $"Subtask generation for: {request.TaskTitle}",
+                PlanSummary = "Generated an AI subtask checklist.",
+                PlanData = resultText,
+                TokensUsed = 0,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
             return resultText;
         }
     }

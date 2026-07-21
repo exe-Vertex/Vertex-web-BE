@@ -17,5 +17,8 @@ namespace Vertex.Services.Interfaces
 
         /// <summary>Get paginated audit log entries.</summary>
         Task<AuditLogListResult> GetAuditLogsAsync(int page, int pageSize);
+
+        /// <summary>Get real successful AI usage entries.</summary>
+        Task<AdminAiUsageListResult> GetAiUsageAsync(int page, int pageSize);
     }
 }

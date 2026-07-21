@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Vertex.Services.Exceptions;
 using Vertex.Services.Interfaces;
 using Vertex.Services.Models;
 
@@ -15,11 +16,13 @@ namespace Vertex_web_BE.Controllers
     {
         private readonly IAiService _aiService;
         private readonly IAiSyncService _aiSyncService;
+        private readonly IAiQuotaService _aiQuotaService;
 
-        public AiController(IAiService aiService, IAiSyncService aiSyncService)
+        public AiController(IAiService aiService, IAiSyncService aiSyncService, IAiQuotaService aiQuotaService)
         {
             _aiService = aiService;
             _aiSyncService = aiSyncService;
+            _aiQuotaService = aiQuotaService;
         }
 
         [HttpPost("chat")]
@@ -31,6 +34,10 @@ namespace Vertex_web_BE.Controllers
                 var orgId = request.OrgId ?? Guid.Empty;
                 var result = await _aiService.ChatAsync(userId, orgId, request.Prompt);
                 return Ok(result);
+            }
+            catch (AiQuotaExceededException ex)
+            {
+                return QuotaExceeded(ex);
             }
             catch (Exception ex)
             {
@@ -47,6 +54,10 @@ namespace Vertex_web_BE.Controllers
                 var planJson = await _aiService.GeneratePlanAsync(userId, request);
                 return Ok(new { planSummary = planJson });
             }
+            catch (AiQuotaExceededException ex)
+            {
+                return QuotaExceeded(ex);
+            }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -62,6 +73,10 @@ namespace Vertex_web_BE.Controllers
                 var history = await _aiService.GetHistoryAsync(userId);
                 return Ok(history);
             }
+            catch (AiQuotaExceededException ex)
+            {
+                return QuotaExceeded(ex);
+            }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -74,16 +89,23 @@ namespace Vertex_web_BE.Controllers
         /// about your projects. The data is stored in RAM and will be lost on server restart.
         /// </summary>
         [HttpPost("sync-data/{orgId}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> SyncData(Guid orgId)
         {
             try
             {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                await _aiQuotaService.ConsumeAsync(userId);
                 var chunksCount = await _aiSyncService.SyncProjectDataAsync(orgId);
                 return Ok(new
                 {
                     message = $"Successfully synced {chunksCount} data chunks into the AI Vector Store.",
                     chunksCount
                 });
+            }
+            catch (AiQuotaExceededException ex)
+            {
+                return QuotaExceeded(ex);
             }
             catch (Exception ex)
             {
@@ -96,13 +118,29 @@ namespace Vertex_web_BE.Controllers
         {
             try
             {
-                var subtasksJson = await _aiService.GenerateSubtasksAsync(request);
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var subtasksJson = await _aiService.GenerateSubtasksAsync(userId, request);
                 return Ok(subtasksJson);
+            }
+            catch (AiQuotaExceededException ex)
+            {
+                return QuotaExceeded(ex);
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        private ObjectResult QuotaExceeded(AiQuotaExceededException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                message = ex.Message,
+                quota = ex.Quota,
+                used = ex.Used,
+                remaining = ex.Remaining
+            });
         }
     }
 }

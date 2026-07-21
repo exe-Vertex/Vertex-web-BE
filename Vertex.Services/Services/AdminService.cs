@@ -215,5 +215,30 @@ namespace Vertex.Services.Services
 
             return new AuditLogListResult(dtos, totalCount, page, pageSize);
         }
+        public async Task<AdminAiUsageListResult> GetAiUsageAsync(int page, int pageSize)
+        {
+            var query = _dbContext.AiHistories
+                .AsNoTracking()
+                .Include(history => history.User)
+                .OrderByDescending(history => history.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var histories = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var entries = histories.Select(history => new AdminAiUsageDto(
+                Id: history.Id,
+                UserId: history.UserId,
+                UserName: history.User.Name,
+                Prompt: history.Prompt,
+                PlanSummary: history.PlanSummary ?? string.Empty,
+                CreatedAt: history.CreatedAt,
+                UsageUnits: 1
+            )).ToList();
+
+            return new AdminAiUsageListResult(entries, totalCount, page, pageSize);
+        }
     }
 }

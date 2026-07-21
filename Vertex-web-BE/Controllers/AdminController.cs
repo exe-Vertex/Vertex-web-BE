@@ -87,6 +87,21 @@ namespace Vertex_web_BE.Controllers
             return Ok(result);
         }
 
+        /// <summary>Get real successful AI usage history. Admin only.</summary>
+        [HttpGet("ai-usage")]
+        public async Task<IActionResult> GetAiUsage(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 200)
+        {
+            GetAdminUserId();
+
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 500) pageSize = 500;
+
+            var result = await _adminService.GetAiUsageAsync(page, pageSize);
+            return Ok(result);
+        }
         // ── Helper ─────────────────────────────────────────
 
         /// <summary>Extract user ID from JWT and verify the caller is an admin.</summary>
