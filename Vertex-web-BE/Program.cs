@@ -173,7 +173,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseMiddleware<Vertex_web_BE.Middlewares.ApiExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() ||
+    builder.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
