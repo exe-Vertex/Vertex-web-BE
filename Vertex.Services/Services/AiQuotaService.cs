@@ -46,5 +46,15 @@ namespace Vertex.Services.Services
 
             throw new AiQuotaExceededException(userState.AiQuota, userState.AiUsed);
         }
+
+        public async Task RefundAsync(Guid userId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            await _dbContext.Users
+                .Where(user => user.Id == userId && user.AiUsed > 0)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(user => user.AiUsed, user => user.AiUsed - 1)
+                    .SetProperty(user => user.UpdatedAt, now));
+        }
     }
 }

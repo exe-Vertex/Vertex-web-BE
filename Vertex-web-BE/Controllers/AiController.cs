@@ -39,6 +39,10 @@ namespace Vertex_web_BE.Controllers
             {
                 return QuotaExceeded(ex);
             }
+            catch (AiProviderUnavailableException ex)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -58,6 +62,10 @@ namespace Vertex_web_BE.Controllers
             {
                 return QuotaExceeded(ex);
             }
+            catch (AiProviderUnavailableException ex)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -76,6 +84,10 @@ namespace Vertex_web_BE.Controllers
             catch (AiQuotaExceededException ex)
             {
                 return QuotaExceeded(ex);
+            }
+            catch (AiProviderUnavailableException ex)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -107,6 +119,10 @@ namespace Vertex_web_BE.Controllers
             {
                 return QuotaExceeded(ex);
             }
+            catch (AiProviderUnavailableException ex)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -125,6 +141,10 @@ namespace Vertex_web_BE.Controllers
             catch (AiQuotaExceededException ex)
             {
                 return QuotaExceeded(ex);
+            }
+            catch (AiProviderUnavailableException ex)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
             }
             catch (Exception ex)
             {
