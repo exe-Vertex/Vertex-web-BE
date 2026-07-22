@@ -64,9 +64,11 @@ RESPONSE STYLE:
 
         public async Task<AiHistory> ChatAsync(Guid userId, Guid orgId, string prompt)
         {
+            if (orgId == Guid.Empty)
+                throw new InvalidOperationException("Organization is required.");
+
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new InvalidOperationException("Prompt is required.");
-
 
             // === Step 1: RAG â€” Search Vector Store for relevant project context ===
             var relevantContext = orgId == Guid.Empty
@@ -111,7 +113,7 @@ RESPONSE STYLE:
             
             _logger.LogInformation("Sending chat request to AI with {HistoryCount} previous messages and {ContextCount} RAG context chunks.",
                 recentMessages.Count, relevantContext.Count);
-            var response = await ExecuteAiRequestAsync(userId, () =>
+            var response = await ExecuteAiRequestAsync(userId, orgId, () =>
                 chatCompletionService.GetChatMessageContentAsync(
                     chatHistory,
                     new GeminiPromptExecutionSettings
@@ -143,9 +145,11 @@ RESPONSE STYLE:
 
         public async Task<string> GeneratePlanAsync(Guid userId, Models.GeneratePlanRequestDto request)
         {
+            if (request.OrgId == Guid.Empty)
+                throw new InvalidOperationException("Organization is required.");
+
             if (string.IsNullOrWhiteSpace(request.ProjectGoal))
                 throw new InvalidOperationException("Project goal is required.");
-
 
             var memberDetails = new StringBuilder();
             if (request.TeamMembers != null)
@@ -252,7 +256,7 @@ CRITICAL JSON RULES:
             var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
             
             _logger.LogInformation("Sending plan generation request to AI.");
-            var response = await ExecuteAiRequestAsync(userId, () =>
+            var response = await ExecuteAiRequestAsync(userId, request.OrgId, () =>
                 chatCompletionService.GetChatMessageContentAsync(
                     chatHistory,
                     new GeminiPromptExecutionSettings
@@ -307,9 +311,11 @@ CRITICAL JSON RULES:
 
         public async Task<string> GenerateSubtasksAsync(Guid userId, Models.GenerateSubtasksRequestDto request)
         {
+            if (request.OrgId == Guid.Empty)
+                throw new InvalidOperationException("Organization is required.");
+
             if (string.IsNullOrWhiteSpace(request.TaskTitle))
                 throw new InvalidOperationException("Task title is required.");
-
 
             var systemPrompt = @"You are an expert technical project manager and agile coach.
 Your job is to break down a complex task into smaller, actionable subtasks (a checklist) to help the assignee execute it effectively.
@@ -327,7 +333,7 @@ Example output:
             var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
             
             _logger.LogInformation("Sending subtask generation request to AI for task: {TaskTitle}", request.TaskTitle);
-            var response = await ExecuteAiRequestAsync(userId, () =>
+            var response = await ExecuteAiRequestAsync(userId, request.OrgId, () =>
                 chatCompletionService.GetChatMessageContentAsync(
                     chatHistory,
                     new GeminiPromptExecutionSettings
@@ -352,9 +358,10 @@ Example output:
 
         private async Task<ChatMessageContent> ExecuteAiRequestAsync(
             Guid userId,
+            Guid orgId,
             Func<Task<ChatMessageContent>> request)
         {
-            await _quotaService.ConsumeAsync(userId);
+            var quotaPeriodStart = await _quotaService.ConsumeAsync(userId, orgId);
 
             const int maxAttempts = 3;
             try
@@ -381,7 +388,7 @@ Example output:
             }
             catch (HttpOperationException ex)
             {
-                await RefundQuotaAfterFailureAsync(userId);
+                await RefundQuotaAfterFailureAsync(orgId, quotaPeriodStart);
                 _logger.LogError(ex, "AI provider request failed with status {StatusCode}.", ex.StatusCode);
                 throw new AiProviderUnavailableException(
                     "The AI service is temporarily unavailable. Please try again shortly.",
@@ -389,20 +396,20 @@ Example output:
             }
             catch
             {
-                await RefundQuotaAfterFailureAsync(userId);
+                await RefundQuotaAfterFailureAsync(orgId, quotaPeriodStart);
                 throw;
             }
         }
 
-        private async Task RefundQuotaAfterFailureAsync(Guid userId)
+        private async Task RefundQuotaAfterFailureAsync(Guid orgId, DateTimeOffset periodStart)
         {
             try
             {
-                await _quotaService.RefundAsync(userId);
+                await _quotaService.RefundAsync(orgId, periodStart);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to refund AI quota for user {UserId}.", userId);
+                _logger.LogError(ex, "Failed to refund AI quota for organization {OrgId}.", orgId);
             }
         }
     }

@@ -107,13 +107,21 @@ namespace Vertex_web_BE.Controllers
             try
             {
                 var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                await _aiQuotaService.ConsumeAsync(userId);
-                var chunksCount = await _aiSyncService.SyncProjectDataAsync(orgId);
-                return Ok(new
+                var quotaPeriodStart = await _aiQuotaService.ConsumeAsync(userId, orgId);
+                try
                 {
-                    message = $"Successfully synced {chunksCount} data chunks into the AI Vector Store.",
-                    chunksCount
-                });
+                    var chunksCount = await _aiSyncService.SyncProjectDataAsync(orgId);
+                    return Ok(new
+                    {
+                        message = $"Successfully synced {chunksCount} data chunks into the AI Vector Store.",
+                        chunksCount
+                    });
+                }
+                catch
+                {
+                    await _aiQuotaService.RefundAsync(orgId, quotaPeriodStart);
+                    throw;
+                }
             }
             catch (AiQuotaExceededException ex)
             {

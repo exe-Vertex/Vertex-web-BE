@@ -65,6 +65,8 @@ namespace Vertex_web_BE.Controllers
                     Plan = detail.Plan,
                     MaxMembers = detail.MaxMembers,
                     AiQuota = detail.AiQuota,
+                    AiUsed = detail.AiUsed,
+                    AiQuotaPeriodStart = detail.AiQuotaPeriodStart,
                     StorageLimit = detail.StorageLimit,
                     CreatedAt = detail.CreatedAt,
                     Members = detail.Members.Select(m => new OrgMemberResponse

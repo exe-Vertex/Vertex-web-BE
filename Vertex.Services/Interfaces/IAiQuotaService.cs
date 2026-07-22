@@ -5,7 +5,7 @@ namespace Vertex.Services.Interfaces
 {
     public interface IAiQuotaService
     {
-        Task ConsumeAsync(Guid userId);
-        Task RefundAsync(Guid userId);
+        Task<DateTimeOffset> ConsumeAsync(Guid userId, Guid orgId);
+        Task RefundAsync(Guid orgId, DateTimeOffset periodStart);
     }
 }

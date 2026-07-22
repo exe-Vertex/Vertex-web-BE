@@ -42,6 +42,8 @@ namespace Vertex_web_BE.Models
         public string Plan { get; set; } = string.Empty;
         public int MaxMembers { get; set; }
         public int AiQuota { get; set; }
+        public int AiUsed { get; set; }
+        public DateTimeOffset AiQuotaPeriodStart { get; set; }
         public long StorageLimit { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public OrgMemberResponse[] Members { get; set; } = Array.Empty<OrgMemberResponse>();

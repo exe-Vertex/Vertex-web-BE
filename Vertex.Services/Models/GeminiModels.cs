@@ -46,6 +46,7 @@ namespace Vertex.Services.Models
 
     public class GeneratePlanRequestDto
     {
+        public Guid OrgId { get; set; }
         public string ProjectGoal { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
@@ -64,6 +65,7 @@ namespace Vertex.Services.Models
 
     public class GenerateSubtasksRequestDto
     {
+        public Guid OrgId { get; set; }
         public string TaskTitle { get; set; } = string.Empty;
         public string TaskDescription { get; set; } = string.Empty;
     }

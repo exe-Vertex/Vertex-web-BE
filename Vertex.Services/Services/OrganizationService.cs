@@ -50,6 +50,7 @@ namespace Vertex.Services.Services
                 Id = Guid.NewGuid(),
                 Name = input.Name.Trim(),
                 Slug = slug,
+                AiQuotaPeriodStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero),
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -139,9 +140,16 @@ namespace Vertex.Services.Services
                 m.JoinedAt
             )).ToList();
 
+            var now = DateTimeOffset.UtcNow;
+            var currentPeriodStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+            var aiUsed = org.AiQuotaPeriodStart < currentPeriodStart ? 0 : org.AiUsed;
+            var quotaPeriodStart = org.AiQuotaPeriodStart < currentPeriodStart
+                ? currentPeriodStart
+                : org.AiQuotaPeriodStart;
+
             return new OrgDetail(
                 org.Id, org.Name, org.Slug, org.Plan,
-                org.MaxMembers, org.AiQuota, org.StorageLimit,
+                org.MaxMembers, org.AiQuota, aiUsed, quotaPeriodStart, org.StorageLimit,
                 org.CreatedAt, members
             );
         }

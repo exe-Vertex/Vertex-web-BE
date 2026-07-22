@@ -140,6 +140,10 @@ namespace Vertex.Repositories
                 entity.Property(x => x.MaxMembers).HasColumnName("max_members");
                 entity.Property(x => x.MaxProjects).HasColumnName("max_projects").HasDefaultValue(3);
                 entity.Property(x => x.AiQuota).HasColumnName("ai_quota");
+                entity.Property(x => x.AiUsed).HasColumnName("ai_used").HasDefaultValue(0);
+                entity.Property(x => x.AiQuotaPeriodStart)
+                    .HasColumnName("ai_quota_period_start")
+                    .HasDefaultValueSql("date_trunc('month', CURRENT_TIMESTAMP)");
                 entity.Property(x => x.StorageLimit).HasColumnName("storage_limit");
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
                 entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");

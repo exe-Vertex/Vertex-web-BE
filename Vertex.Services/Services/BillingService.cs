@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -272,8 +272,11 @@ namespace Vertex.Services.Services
             if (org == null)
                 throw new InvalidOperationException("Organization not found.");
 
+            var now = DateTimeOffset.UtcNow;
             org.Plan = transaction.Plan;
-            org.UpdatedAt = DateTimeOffset.UtcNow;
+            org.AiUsed = 0;
+            org.AiQuotaPeriodStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+            org.UpdatedAt = now;
 
             if (transaction.Plan == "pro")
             {
