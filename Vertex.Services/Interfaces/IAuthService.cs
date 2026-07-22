@@ -12,5 +12,7 @@ namespace Vertex.Services.Interfaces
         Task<AuthUser> GetMeAsync(Guid userId);
         Task<AuthTokens> RefreshAsync(string refreshToken);
         Task LogoutAsync(string refreshToken);
+        Task ForgotPasswordAsync(string email);
+        Task ResetPasswordAsync(string token, string newPassword);
     }
 }

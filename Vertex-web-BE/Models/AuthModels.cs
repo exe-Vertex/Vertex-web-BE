@@ -30,6 +30,25 @@ namespace Vertex_web_BE.Models
         public string Password { get; set; } = string.Empty;
     }
 
+    public class ForgotPasswordRequest
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Email format is invalid.")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        [Required(ErrorMessage = "Reset token is required.")]
+        [StringLength(200)]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required.")]
+        [StringLength(128, MinimumLength = 8, ErrorMessage = "Password must contain between 8 and 128 characters.")]
+        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*d).{8,}$",
+            ErrorMessage = "Password must contain at least one letter and one number.")]
+        public string NewPassword { get; set; } = string.Empty;
+    }
     public class RefreshRequest
     {
         public string RefreshToken { get; set; } = string.Empty;

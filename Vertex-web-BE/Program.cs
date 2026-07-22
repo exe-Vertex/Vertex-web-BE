@@ -84,6 +84,7 @@ var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? ne
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSection("PasswordReset"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("GeminiSettings"));
 builder.Services.Configure<PayOSSettings>(builder.Configuration.GetSection("PayOS"));
 builder.Services.Configure<ExternalAuthSettings>(builder.Configuration.GetSection("ExternalAuth"));

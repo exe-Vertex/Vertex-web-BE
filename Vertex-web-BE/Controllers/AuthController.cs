@@ -56,6 +56,29 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            await _authService.ForgotPasswordAsync(request.Email);
+            return Ok(new
+            {
+                message = "If an account with that email exists, a password reset link has been sent."
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                await _authService.ResetPasswordAsync(request.Token, request.NewPassword);
+                return Ok(new { message = "Password has been reset successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         [HttpPost("external-login")]
         public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginRequest request)
         {

@@ -24,6 +24,7 @@ namespace Vertex.Entities.Users
 
         // Navigation
         public ICollection<Auth.RefreshToken> RefreshTokens { get; set; } = new List<Auth.RefreshToken>();
+        public ICollection<Auth.PasswordResetToken> PasswordResetTokens { get; set; } = new List<Auth.PasswordResetToken>();
         public ICollection<Organizations.OrganizationMember> OrganizationMemberships { get; set; } = new List<Organizations.OrganizationMember>();
         public ICollection<UserSkill> Skills { get; set; } = new List<UserSkill>();
         public ICollection<Workspaces.WorkspaceMember> WorkspaceMemberships { get; set; } = new List<Workspaces.WorkspaceMember>();

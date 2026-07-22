@@ -20,6 +20,7 @@ namespace Vertex.Repositories
         // ── Existing ──
         public DbSet<User> Users => Set<User>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
         public DbSet<Organization> Organizations => Set<Organization>();
         public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
         public DbSet<Project> Projects => Set<Project>();
@@ -90,6 +91,25 @@ namespace Vertex.Repositories
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            modelBuilder.Entity<PasswordResetToken>(entity =>
+            {
+                entity.ToTable("password_reset_tokens");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.TokenHash).HasColumnName("token_hash").HasMaxLength(64);
+                entity.Property(x => x.ExpiresAt).HasColumnName("expires_at");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UsedAt).HasColumnName("used_at");
+
+                entity.HasIndex(x => x.TokenHash).IsUnique();
+                entity.HasIndex(x => x.UserId);
+
+                entity.HasOne(x => x.User)
+                    .WithMany(x => x.PasswordResetTokens)
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
             // ── 3. User Skills ────────────────────────────────
             modelBuilder.Entity<UserSkill>(entity =>
             {
