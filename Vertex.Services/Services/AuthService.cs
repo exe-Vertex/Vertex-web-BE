@@ -85,7 +85,9 @@ namespace Vertex.Services.Services
         public async Task<AuthTokens> LoginAsync(LoginInput input)
         {
             var user = await _userRepository.GetByEmailAsync(input.Email);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(input.Password, user.PasswordHash))
+            if (user == null ||
+                string.IsNullOrWhiteSpace(user.PasswordHash) ||
+                !BCrypt.Net.BCrypt.Verify(input.Password, user.PasswordHash))
             {
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
