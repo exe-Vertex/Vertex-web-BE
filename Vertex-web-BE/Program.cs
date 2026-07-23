@@ -131,6 +131,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<ILecturerService, LecturerService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IStorageUsageService, StorageUsageService>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ITaskNotifier, SignalRTaskNotifier>();
 builder.Services.AddScoped<IEmailService, EmailService>();

@@ -14,11 +14,13 @@ namespace Vertex.Services.Services
     public class FileService : IFileService
     {
         private readonly AppDbContext _dbContext;
+        private readonly IStorageUsageService _storageUsageService;
         private readonly string _webRootPath;
 
-        public FileService(AppDbContext dbContext)
+        public FileService(AppDbContext dbContext, IStorageUsageService storageUsageService)
         {
             _dbContext = dbContext;
+            _storageUsageService = storageUsageService;
             _webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         }
 
@@ -29,6 +31,8 @@ namespace Vertex.Services.Services
 
             var projectMember = await _dbContext.ProjectMembers.FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uploaderId);
             if (projectMember == null) throw new Exception("You are not a member of this project");
+
+            await _storageUsageService.EnsureCanStoreAsync(project.OrgId, length);
 
             var uploadsFolder = Path.Combine(_webRootPath, "uploads", "projects", projectId.ToString());
             if (!Directory.Exists(uploadsFolder))
@@ -209,9 +213,14 @@ namespace Vertex.Services.Services
         // ── Task Attachments ───────────────────────────────────────
         public async Task<TaskAttachmentDto> UploadTaskFileAsync(Guid taskId, Guid uploaderId, string fileName, string contentType, long length, Stream fileStream)
         {
-            var task = await _dbContext.ProjectTasks.FindAsync(taskId);
+            var task = await _dbContext.ProjectTasks
+                .Include(projectTask => projectTask.Project)
+                .FirstOrDefaultAsync(projectTask => projectTask.Id == taskId);
             if (task == null) throw new Exception("Task not found");
             if (task.AssigneeId != uploaderId) throw new Exception("Only the assignee can attach files to this task");
+            if (task.Project == null) throw new Exception("Project not found");
+
+            await _storageUsageService.EnsureCanStoreAsync(task.Project.OrgId, length);
 
             var uploadsFolder = Path.Combine(_webRootPath, "uploads", "tasks", taskId.ToString());
             if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);

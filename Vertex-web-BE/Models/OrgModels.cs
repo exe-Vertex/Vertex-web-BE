@@ -44,6 +44,7 @@ namespace Vertex_web_BE.Models
         public int AiQuota { get; set; }
         public int AiUsed { get; set; }
         public DateTimeOffset AiQuotaPeriodStart { get; set; }
+        public long StorageUsed { get; set; }
         public long StorageLimit { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public OrgMemberResponse[] Members { get; set; } = Array.Empty<OrgMemberResponse>();

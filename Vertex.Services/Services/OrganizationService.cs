@@ -16,17 +16,23 @@ namespace Vertex.Services.Services
         private readonly IOrganizationRepository _orgRepo;
         private readonly IUserRepository _userRepo;
         private readonly AppDbContext _context;
+        private readonly IStorageUsageService _storageUsageService;
 
         private static readonly HashSet<string> AssignableRoles = new(StringComparer.OrdinalIgnoreCase)
         {
             "admin", "lecturer", "member"
         };
 
-        public OrganizationService(IOrganizationRepository orgRepo, IUserRepository userRepo, AppDbContext context)
+        public OrganizationService(
+            IOrganizationRepository orgRepo,
+            IUserRepository userRepo,
+            AppDbContext context,
+            IStorageUsageService storageUsageService)
         {
             _orgRepo = orgRepo;
             _userRepo = userRepo;
             _context = context;
+            _storageUsageService = storageUsageService;
         }
 
         // ── Create ─────────────────────────────────────────
@@ -146,10 +152,11 @@ namespace Vertex.Services.Services
             var quotaPeriodStart = org.AiQuotaPeriodStart < currentPeriodStart
                 ? currentPeriodStart
                 : org.AiQuotaPeriodStart;
+            var storageUsed = await _storageUsageService.GetUsedBytesAsync(orgId);
 
             return new OrgDetail(
                 org.Id, org.Name, org.Slug, org.Plan,
-                org.MaxMembers, org.AiQuota, aiUsed, quotaPeriodStart, org.StorageLimit,
+                org.MaxMembers, org.AiQuota, aiUsed, quotaPeriodStart, storageUsed, org.StorageLimit,
                 org.CreatedAt, members
             );
         }

@@ -32,6 +32,7 @@ namespace Vertex.Services.Models
         int AiQuota,
         int AiUsed,
         DateTimeOffset AiQuotaPeriodStart,
+        long StorageUsed,
         long StorageLimit,
         DateTimeOffset CreatedAt,
         List<OrgMemberDto> Members
