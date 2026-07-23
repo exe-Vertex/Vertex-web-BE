@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -38,11 +39,20 @@ namespace Vertex.Services.Services
 
         private async Task<ExternalUserInfo> VerifyGoogleTokenAsync(string idToken)
         {
+            var audiences = _settings.Google.ClientIds
+                .Append(_settings.Google.ClientId)
+                .Where(clientId => !string.IsNullOrWhiteSpace(clientId))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            if (audiences.Length == 0)
+                throw new InvalidOperationException("No Google OAuth client ID is configured.");
+
             try
             {
                 var settings = new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { _settings.Google.ClientId }
+                    Audience = audiences
                 };
 
                 var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);

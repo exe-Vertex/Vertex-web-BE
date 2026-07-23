@@ -9,6 +9,7 @@ namespace Vertex.Services.Models
     public class GoogleAuthSettings
     {
         public string ClientId { get; set; } = string.Empty;
+        public string[] ClientIds { get; set; } = Array.Empty<string>();
     }
 
     public class GitHubAuthSettings

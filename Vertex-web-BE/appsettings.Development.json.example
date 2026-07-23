@@ -33,7 +33,11 @@
   },
   "ExternalAuth": {
     "Google": {
-      "ClientId": "<YOUR_GOOGLE_OAUTH_CLIENT_ID>"
+      "ClientId": "<YOUR_LEGACY_GOOGLE_OAUTH_CLIENT_ID>",
+      "ClientIds": [
+        "<YOUR_WEB_GOOGLE_OAUTH_CLIENT_ID>",
+        "<YOUR_MOBILE_GOOGLE_OAUTH_CLIENT_ID>"
+      ]
     },
     "GitHub": {
       "ClientId": "<YOUR_GITHUB_OAUTH_CLIENT_ID>",
