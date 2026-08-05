@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Vertex.Services.Models;
 
@@ -14,6 +15,12 @@ namespace Vertex.Services.Interfaces
 
         /// <summary>Update a user's AI quota. Writes an audit log entry.</summary>
         Task<AdminUserDto> UpdateUserAiQuotaAsync(Guid adminId, Guid targetUserId, int newQuota);
+
+        /// <summary>Get the real organization-level AI quotas used by AI endpoints.</summary>
+        Task<List<AdminOrganizationQuotaDto>> GetOrganizationQuotasAsync();
+
+        /// <summary>Update an organization's AI quota. Writes an audit log entry.</summary>
+        Task<AdminOrganizationQuotaDto> UpdateOrganizationAiQuotaAsync(Guid adminId, Guid orgId, int newQuota);
 
         /// <summary>Get paginated audit log entries.</summary>
         Task<AuditLogListResult> GetAuditLogsAsync(int page, int pageSize);

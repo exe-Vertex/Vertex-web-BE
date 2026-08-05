@@ -102,6 +102,29 @@ namespace Vertex_web_BE.Controllers
             var result = await _adminService.GetAiUsageAsync(page, pageSize);
             return Ok(result);
         }
+        /// <summary>Get real organization-level AI quotas. Admin only.</summary>
+        [HttpGet("organizations/quotas")]
+        public async Task<IActionResult> GetOrganizationQuotas()
+        {
+            GetAdminUserId();
+            return Ok(await _adminService.GetOrganizationQuotasAsync());
+        }
+
+        /// <summary>Update an organization's AI quota. Admin only.</summary>
+        [HttpPut("organizations/{id:guid}/quota")]
+        public async Task<IActionResult> UpdateOrganizationQuota(Guid id, [FromBody] UpdateUserQuotaRequest request)
+        {
+            try
+            {
+                var adminId = GetAdminUserId();
+                return Ok(await _adminService.UpdateOrganizationAiQuotaAsync(adminId, id, request.AiQuota));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // ── Helper ─────────────────────────────────────────
 
         /// <summary>Extract user ID from JWT and verify the caller is an admin.</summary>

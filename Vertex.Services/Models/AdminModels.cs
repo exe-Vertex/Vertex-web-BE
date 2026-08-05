@@ -30,6 +30,16 @@ namespace Vertex.Services.Models
     /// <summary>Input for updating user AI quota.</summary>
     public record UpdateUserAiQuotaInput(int AiQuota);
 
+    public record AdminOrganizationQuotaDto(
+        Guid Id,
+        string Name,
+        string Plan,
+        int AiQuota,
+        int AiUsed,
+        DateTimeOffset AiQuotaPeriodStart,
+        int MemberCount
+    );
+
     /// <summary>Audit log DTO returned to FE.</summary>
     public record AuditLogDto(
         Guid Id,

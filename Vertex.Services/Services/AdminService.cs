@@ -187,6 +187,72 @@ namespace Vertex.Services.Services
             );
         }
 
+        public async Task<List<AdminOrganizationQuotaDto>> GetOrganizationQuotasAsync()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var periodStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+
+            await _dbContext.Organizations
+                .Where(org => org.AiQuotaPeriodStart < periodStart)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(org => org.AiUsed, 0)
+                    .SetProperty(org => org.AiQuotaPeriodStart, periodStart)
+                    .SetProperty(org => org.UpdatedAt, now));
+
+            return await _dbContext.Organizations
+                .AsNoTracking()
+                .OrderByDescending(org => org.CreatedAt)
+                .Select(org => new AdminOrganizationQuotaDto(
+                    org.Id,
+                    org.Name,
+                    org.Plan,
+                    org.AiQuota,
+                    org.AiUsed,
+                    org.AiQuotaPeriodStart,
+                    org.Members.Count))
+                .ToListAsync();
+        }
+
+        public async Task<AdminOrganizationQuotaDto> UpdateOrganizationAiQuotaAsync(
+            Guid adminId,
+            Guid orgId,
+            int newQuota)
+        {
+            if (newQuota < 0)
+                throw new InvalidOperationException("AI quota cannot be negative.");
+
+            var org = await _dbContext.Organizations
+                .Include(item => item.Members)
+                .FirstOrDefaultAsync(item => item.Id == orgId);
+            if (org == null)
+                throw new InvalidOperationException("Organization not found.");
+
+            var previousQuota = org.AiQuota;
+            org.AiQuota = newQuota;
+            org.UpdatedAt = DateTimeOffset.UtcNow;
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                AdminId = adminId,
+                Action = "change_quota",
+                TargetUserId = null,
+                Detail = $"Changed AI quota for organization '{org.Name}' from {previousQuota} to {newQuota}",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+
+            await _dbContext.SaveChangesAsync();
+
+            return new AdminOrganizationQuotaDto(
+                org.Id,
+                org.Name,
+                org.Plan,
+                org.AiQuota,
+                org.AiUsed,
+                org.AiQuotaPeriodStart,
+                org.Members.Count);
+        }
+
         // ── Audit Logs ────────────────────────────────────────────────
 
         public async Task<AuditLogListResult> GetAuditLogsAsync(int page, int pageSize)
