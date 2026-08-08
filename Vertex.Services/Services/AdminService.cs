@@ -48,21 +48,26 @@ namespace Vertex.Services.Services
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Resolve plan from organization membership (pick highest-level org plan)
+            // Resolve the highest plan across all organizations the user belongs to.
             var userIds = users.Select(u => u.Id).ToList();
             var membershipPlans = await _dbContext.OrganizationMembers
                 .AsNoTracking()
                 .Where(m => userIds.Contains(m.UserId))
-                .Include(m => m.Organization)
-                .GroupBy(m => m.UserId)
-                .Select(g => new
+                .Select(m => new
                 {
-                    UserId = g.Key,
-                    Plan = g.Select(m => m.Organization.Plan).FirstOrDefault() ?? "free"
+                    m.UserId,
+                    m.Organization.Plan
                 })
                 .ToListAsync();
 
-            var planLookup = membershipPlans.ToDictionary(x => x.UserId, x => x.Plan);
+            var planLookup = membershipPlans
+                .GroupBy(x => x.UserId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderByDescending(item => GetPlanPriority(item.Plan))
+                        .Select(item => item.Plan)
+                        .FirstOrDefault() ?? "free");
 
             var dtos = users.Select(u => new AdminUserDto(
                 Id: u.Id,
@@ -117,13 +122,7 @@ namespace Vertex.Services.Services
 
             await _dbContext.SaveChangesAsync();
 
-            // Resolve plan
-            var plan = await _dbContext.OrganizationMembers
-                .AsNoTracking()
-                .Where(m => m.UserId == user.Id)
-                .Include(m => m.Organization)
-                .Select(m => m.Organization.Plan)
-                .FirstOrDefaultAsync() ?? "free";
+            var plan = await GetHighestPlanForUserAsync(user.Id);
 
             return new AdminUserDto(
                 Id: user.Id,
@@ -167,12 +166,7 @@ namespace Vertex.Services.Services
 
             await _dbContext.SaveChangesAsync();
 
-            var plan = await _dbContext.OrganizationMembers
-                .AsNoTracking()
-                .Where(m => m.UserId == user.Id)
-                .Include(m => m.Organization)
-                .Select(m => m.Organization.Plan)
-                .FirstOrDefaultAsync() ?? "free";
+            var plan = await GetHighestPlanForUserAsync(user.Id);
 
             return new AdminUserDto(
                 Id: user.Id,
@@ -306,5 +300,27 @@ namespace Vertex.Services.Services
 
             return new AdminAiUsageListResult(entries, totalCount, page, pageSize);
         }
+
+        private async Task<string> GetHighestPlanForUserAsync(Guid userId)
+        {
+            var plans = await _dbContext.OrganizationMembers
+                .AsNoTracking()
+                .Where(member => member.UserId == userId)
+                .Select(member => member.Organization.Plan)
+                .ToListAsync();
+
+            return plans
+                .OrderByDescending(GetPlanPriority)
+                .FirstOrDefault() ?? "free";
+        }
+
+        private static int GetPlanPriority(string? plan) => plan?.ToLowerInvariant() switch
+        {
+            "enterprise" => 4,
+            "business" => 3,
+            "pro" => 2,
+            "paid" => 1,
+            _ => 0
+        };
     }
 }
