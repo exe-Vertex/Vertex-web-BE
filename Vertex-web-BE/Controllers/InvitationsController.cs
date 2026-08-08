@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -33,6 +34,30 @@ namespace Vertex_web_BE.Controllers
                 userId, request.Email, request.TargetType, request.TargetId, request.Role);
 
             return Ok(new { Message = "Invitation sent successfully", InvitationId = invitation.Id });
+        }
+        [HttpPost("project-link")]
+        [Authorize]
+        public async Task<IActionResult> CreateProjectInvitationLink([FromBody] CreateProjectInvitationLinkRequest request)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+            var isLeader = await _context.ProjectMembers
+                .AsNoTracking()
+                .AnyAsync(member => member.ProjectId == request.ProjectId
+                    && member.UserId == userId
+                    && member.Role == "Leader");
+
+            if (!isLeader) return Forbid();
+
+            var invitation = await _invitationService.CreateShareableInvitationAsync(
+                userId, "Project", request.ProjectId, "Member");
+
+            return Ok(new
+            {
+                invitation.Token,
+                invitation.ExpiredAt
+            });
         }
 
         [HttpGet("verify")]

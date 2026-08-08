@@ -24,4 +24,10 @@ namespace Vertex_web_BE.Models
         [Required]
         public string Token { get; set; } = string.Empty;
     }
+
+    public class CreateProjectInvitationLinkRequest
+    {
+        [Required]
+        public Guid ProjectId { get; set; }
+    }
 }

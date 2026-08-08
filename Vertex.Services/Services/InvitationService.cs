@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -13,11 +14,15 @@ namespace Vertex.Services.Services
     {
         private readonly AppDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly string _frontendUrl;
 
-        public InvitationService(AppDbContext context, IEmailService emailService)
+        public InvitationService(AppDbContext context, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _emailService = emailService;
+            _frontendUrl = (configuration["Invitations:FrontendUrl"]
+                ?? configuration["PasswordReset:FrontendUrl"]
+                ?? "http://localhost:3000").TrimEnd('/');
         }
 
         public async Task<Invitation> CreateInvitationAsync(Guid creatorId, string email, string targetType, Guid targetId, string role)
@@ -54,7 +59,7 @@ namespace Vertex.Services.Services
             await _context.SaveChangesAsync();
 
             // Gửi email
-            var acceptLink = $"http://localhost:3000/#/invite/accept?token={token}";
+            var acceptLink = $"{_frontendUrl}/#/invite/accept?token={token}";
             var subject = $"You have been invited to join a {targetType} on Vertex";
             var body = $@"
                 <h3>Hello,</h3>
@@ -72,6 +77,42 @@ namespace Vertex.Services.Services
             return invitation;
         }
 
+        public async Task<Invitation> CreateShareableInvitationAsync(Guid creatorId, string targetType, Guid targetId, string role)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var existing = await _context.Invitations.FirstOrDefaultAsync(invitation =>
+                invitation.Email == string.Empty
+                && invitation.TargetType == targetType
+                && invitation.TargetId == targetId
+                && invitation.Role == role
+                && invitation.CreatedBy == creatorId
+                && invitation.Status == "Pending"
+                && invitation.ExpiredAt > now);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var invitation = new Invitation
+            {
+                Id = Guid.NewGuid(),
+                Email = string.Empty,
+                TargetType = targetType,
+                TargetId = targetId,
+                Role = targetType == "Project" && role == "Leader" ? "Member" : role,
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                    .Replace("+", "-").Replace("/", "_").TrimEnd('='),
+                Status = "Pending",
+                CreatedBy = creatorId,
+                CreatedAt = now,
+                ExpiredAt = now.AddDays(7)
+            };
+
+            _context.Invitations.Add(invitation);
+            await _context.SaveChangesAsync();
+            return invitation;
+        }
         public async Task<Invitation> VerifyTokenAsync(string token)
         {
             var invitation = await _context.Invitations.FirstOrDefaultAsync(x => x.Token == token);
@@ -100,7 +141,8 @@ namespace Vertex.Services.Services
             var invitation = await VerifyTokenAsync(token);
             
             var user = await _context.Users.FindAsync(userId);
-            if (user == null || user.Email != invitation.Email)
+            if (user == null || (!string.IsNullOrWhiteSpace(invitation.Email)
+                && !string.Equals(user.Email, invitation.Email, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new InvalidOperationException("You must be logged in with the invited email address to accept this invitation.");
             }
@@ -160,7 +202,10 @@ namespace Vertex.Services.Services
                 }
             }
 
-            invitation.Status = "Accepted";
+            if (!string.IsNullOrWhiteSpace(invitation.Email))
+            {
+                invitation.Status = "Accepted";
+            }
             await _context.SaveChangesAsync();
         }
     }
