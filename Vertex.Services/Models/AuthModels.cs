@@ -9,7 +9,7 @@ namespace Vertex.Services.Models
         DateTimeOffset RefreshTokenExpiresAt
     );
 
-    public record AuthUser(Guid Id, string Name, string Email, string Role);
+    public record AuthUser(Guid Id, string Name, string Email, string Role, string AvatarUrl);
 
     public record RegisterInput(string Name, string Email, string Password);
 

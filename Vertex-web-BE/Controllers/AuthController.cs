@@ -21,11 +21,13 @@ namespace Vertex_web_BE.Controllers
     {
         private readonly IAuthService _authService;
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public AuthController(IAuthService authService, AppDbContext context)
+        public AuthController(IAuthService authService, AppDbContext context, IWebHostEnvironment environment)
         {
             _authService = authService;
             _context = context;
+            _environment = environment;
         }
 
         [HttpPost("register")]
@@ -115,10 +117,81 @@ namespace Vertex_web_BE.Controllers
                 Id = me.Id,
                 Name = me.Name,
                 Email = me.Email,
-                Role = me.Role
+                Role = me.Role,
+                AvatarUrl = me.AvatarUrl
             });
         }
 
+        [Authorize]
+        [HttpPost("avatar")]
+        [RequestSizeLimit(1024 * 1024)]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "Please select an image." });
+
+            const long maxAvatarSize = 800 * 1024;
+            if (file.Length > maxAvatarSize)
+                return BadRequest(new { message = "Avatar must not exceed 800 KB." });
+
+            var extension = file.ContentType.ToLowerInvariant() switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/png" => ".png",
+                "image/gif" => ".gif",
+                _ => null
+            };
+            if (extension == null || !await HasValidImageSignatureAsync(file, extension))
+                return BadRequest(new { message = "Only valid JPG, PNG, or GIF images are supported." });
+
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (!Guid.TryParse(userIdValue, out var userId))
+                return Unauthorized(new { message = "Invalid access token." });
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            DeleteStoredAvatar(user.AvatarUrl);
+
+            var avatarsFolder = GetAvatarsFolder();
+            Directory.CreateDirectory(avatarsFolder);
+            var fileName = $"{user.Id:N}-{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(avatarsFolder, fileName);
+
+            await using (var target = System.IO.File.Create(filePath))
+            {
+                await file.CopyToAsync(target);
+            }
+
+            user.AvatarUrl = $"/uploads/avatars/{fileName}";
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { avatarUrl = user.AvatarUrl });
+        }
+
+        [Authorize]
+        [HttpDelete("avatar")]
+        public async Task<IActionResult> RemoveAvatar()
+        {
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (!Guid.TryParse(userIdValue, out var userId))
+                return Unauthorized(new { message = "Invalid access token." });
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            DeleteStoredAvatar(user.AvatarUrl);
+            user.AvatarUrl = string.Empty;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
         {
@@ -195,6 +268,44 @@ namespace Vertex_web_BE.Controllers
             return Ok(new { Message = "Skills updated successfully" });
         }
 
+        private string GetAvatarsFolder()
+        {
+            var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
+                ? Path.Combine(_environment.ContentRootPath, "wwwroot")
+                : _environment.WebRootPath;
+            return Path.Combine(webRoot, "uploads", "avatars");
+        }
+
+        private void DeleteStoredAvatar(string? avatarUrl)
+        {
+            if (string.IsNullOrWhiteSpace(avatarUrl)
+                || !avatarUrl.StartsWith("/uploads/avatars/", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var fileName = Path.GetFileName(avatarUrl);
+            var filePath = Path.Combine(GetAvatarsFolder(), fileName);
+            if (System.IO.File.Exists(filePath))
+                System.IO.File.Delete(filePath);
+        }
+
+        private static async Task<bool> HasValidImageSignatureAsync(IFormFile file, string extension)
+        {
+            var header = new byte[8];
+            await using var stream = file.OpenReadStream();
+            var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length));
+
+            return extension switch
+            {
+                ".jpg" => bytesRead >= 3
+                    && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
+                ".png" => bytesRead >= 8
+                    && header.SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
+                ".gif" => bytesRead >= 6
+                    && (System.Text.Encoding.ASCII.GetString(header, 0, 6) == "GIF87a"
+                        || System.Text.Encoding.ASCII.GetString(header, 0, 6) == "GIF89a"),
+                _ => false
+            };
+        }
         private static AuthResponse ToAuthResponse(AuthTokens tokens)
         {
             return new AuthResponse

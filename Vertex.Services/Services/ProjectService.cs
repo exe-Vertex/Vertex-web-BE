@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Vertex.Entities.Organizations;
+using Vertex.Entities.Notifications;
 using Vertex.Entities.Projects;
 using Vertex.Repositories.Interfaces;
 using Vertex.Services.Interfaces;
@@ -16,6 +17,7 @@ namespace Vertex.Services.Services
         private readonly IUserRepository _userRepo;
         private readonly IOrganizationRepository _orgRepo;
         private readonly ITaskNotifier _taskNotifier;
+        private readonly INotificationRepository _notificationRepo;
 
         private static readonly Dictionary<string, int> StatusWeight = new()
         {
@@ -25,12 +27,13 @@ namespace Vertex.Services.Services
             ["done"] = 100,
         };
 
-        public ProjectService(IProjectRepository projectRepo, IUserRepository userRepo, IOrganizationRepository orgRepo, ITaskNotifier taskNotifier)
+        public ProjectService(IProjectRepository projectRepo, IUserRepository userRepo, IOrganizationRepository orgRepo, ITaskNotifier taskNotifier, INotificationRepository notificationRepo)
         {
             _projectRepo = projectRepo;
             _userRepo = userRepo;
             _orgRepo = orgRepo;
             _taskNotifier = taskNotifier;
+            _notificationRepo = notificationRepo;
         }
 
         // â”€â”€ Projects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -184,6 +187,9 @@ namespace Vertex.Services.Services
             };
 
             await _projectRepo.AddTaskAsync(task);
+            if (task.AssigneeId.HasValue)
+                await NotifyTaskAssignedAsync(task.AssigneeId.Value, task.Title);
+
 
             // Re-fetch with Assignee navigation
             var saved = await _projectRepo.GetTaskByIdAsync(task.Id);
@@ -198,6 +204,7 @@ namespace Vertex.Services.Services
         {
             var task = await _projectRepo.GetTaskByIdAsync(taskId);
             if (task == null) throw new InvalidOperationException("Task not found.");
+            var previousAssigneeId = task.AssigneeId;
 
             if (input.Title != null) task.Title = input.Title.Trim();
             if (input.Description != null) task.Description = input.Description.Trim();
@@ -216,6 +223,9 @@ namespace Vertex.Services.Services
             var resultDto = MapTask(updated!);
             
             await _taskNotifier.NotifyTaskUpdatedAsync(task.ProjectId, resultDto);
+            if (task.AssigneeId.HasValue && task.AssigneeId != previousAssigneeId)
+                await NotifyTaskAssignedAsync(task.AssigneeId.Value, task.Title);
+
             
             return resultDto;
         }
@@ -335,6 +345,19 @@ namespace Vertex.Services.Services
             var projectMember = await _projectRepo.GetMemberAsync(projectId, requesterId);
             if (projectMember == null)
                 throw new UnauthorizedAccessException("You do not have access to this project.");
+        }
+
+        private Task NotifyTaskAssignedAsync(Guid assigneeId, string taskTitle)
+        {
+            return _notificationRepo.AddAsync(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = assigneeId,
+                Type = "info",
+                Message = $"You were assigned to task '{taskTitle}'.",
+                IsRead = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
         }
 
         private async Task<OrganizationMember> EnsureOrgMemberAsync(Guid orgId, Guid userId)

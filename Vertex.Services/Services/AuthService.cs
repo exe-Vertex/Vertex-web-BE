@@ -164,7 +164,7 @@ namespace Vertex.Services.Services
                 throw new InvalidOperationException("User not found.");
             }
 
-            return new AuthUser(user.Id, user.Name, user.Email, user.Role);
+            return new AuthUser(user.Id, user.Name, user.Email, user.Role, user.AvatarUrl);
         }
 
         public async Task<AuthTokens> RefreshAsync(string refreshToken)

@@ -417,6 +417,9 @@ FodyWeavers.xsd
 .idea/
 
 ##
+
+# User-uploaded runtime files
+Vertex-web-BE/wwwroot/uploads/avatars/
 ## Visual studio for Mac
 ##
 
