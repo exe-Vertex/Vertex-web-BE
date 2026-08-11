@@ -42,6 +42,8 @@ namespace Vertex.Services.Services
         {
             if (string.IsNullOrWhiteSpace(input.Name))
                 throw new InvalidOperationException("Project name is required.");
+            if (input.Deadline.Date < DateTime.UtcNow.Date)
+                throw new InvalidOperationException("Project deadline cannot be in the past.");
 
             var org = await _orgRepo.GetByIdAsync(orgId);
             if (org == null)
