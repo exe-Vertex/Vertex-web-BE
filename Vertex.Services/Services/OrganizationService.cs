@@ -77,6 +77,41 @@ namespace Vertex.Services.Services
             return new OrgSummary(org.Id, org.Name, org.Slug, org.Plan, 1, org.MaxMembers, org.CreatedAt);
         }
 
+        public async Task<OrgSummary> UpdateOrgAsync(Guid orgId, Guid requesterId, UpdateOrgInput input)
+        {
+            if (string.IsNullOrWhiteSpace(input.Name))
+                throw new InvalidOperationException("Organization name is required.");
+
+            if (string.IsNullOrWhiteSpace(input.Slug))
+                throw new InvalidOperationException("Organization URL is required.");
+
+            var slug = input.Slug.ToLowerInvariant().Trim();
+            if (slug.Length > 100 || slug.Any(ch => !(char.IsAsciiLetterOrDigit(ch) || ch == '-')) || slug.StartsWith('-') || slug.EndsWith('-') || slug.Contains("--"))
+                throw new InvalidOperationException("Organization URL can only contain lowercase letters, numbers, and single hyphens.");
+
+            var requester = await _orgRepo.GetMemberAsync(orgId, requesterId);
+            if (requester == null)
+                throw new UnauthorizedAccessException("You are not a member of this organization.");
+            if (requester.Role != "owner" && requester.Role != "admin")
+                throw new UnauthorizedAccessException("Only organization owners and admins can update organization details.");
+
+            var org = await _orgRepo.GetByIdAsync(orgId);
+            if (org == null)
+                throw new InvalidOperationException("Organization not found.");
+
+            var slugOwner = await _orgRepo.GetBySlugAsync(slug);
+            if (slugOwner != null && slugOwner.Id != orgId)
+                throw new InvalidOperationException("This organization URL is already in use.");
+
+            org.Name = input.Name.Trim();
+            org.Slug = slug;
+            org.UpdatedAt = DateTimeOffset.UtcNow;
+            await _orgRepo.UpdateAsync(org);
+
+            var memberCount = await _orgRepo.CountMembersAsync(orgId);
+            return new OrgSummary(org.Id, org.Name, org.Slug, org.Plan, memberCount, org.MaxMembers, org.CreatedAt);
+        }
+
         // ── List my orgs ───────────────────────────────────
 
         public async Task<List<OrgSummary>> GetMyOrgsAsync(Guid userId)

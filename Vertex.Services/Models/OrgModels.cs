@@ -7,6 +7,8 @@ namespace Vertex.Services.Models
 
     public record CreateOrgInput(string Name, string Slug);
 
+    public record UpdateOrgInput(string Name, string Slug);
+
     public record InviteMemberInput(string Email, string Role);
 
     public record UpdateMemberRoleInput(string Role);

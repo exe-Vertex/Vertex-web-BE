@@ -8,6 +8,7 @@ namespace Vertex.Services.Interfaces
     public interface IOrganizationService
     {
         Task<OrgSummary> CreateOrgAsync(Guid ownerId, CreateOrgInput input);
+        Task<OrgSummary> UpdateOrgAsync(Guid orgId, Guid requesterId, UpdateOrgInput input);
         Task<List<OrgSummary>> GetMyOrgsAsync(Guid userId);
         Task<OrgDetail> GetOrgDetailAsync(Guid orgId, Guid requesterId);
         Task<OrgMemberDto> InviteMemberAsync(Guid orgId, Guid requesterId, InviteMemberInput input);

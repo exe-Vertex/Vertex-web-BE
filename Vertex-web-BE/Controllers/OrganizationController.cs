@@ -39,6 +39,26 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
+
+        /// <summary>Update organization name and URL slug.</summary>
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateOrgRequest request)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var result = await _orgService.UpdateOrgAsync(id, userId, new UpdateOrgInput(request.Name, request.Slug));
+                return Ok(ToSummaryResponse(result));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+        }
         /// <summary>List organizations for the current user.</summary>
         [HttpGet]
         public async Task<IActionResult> ListMyOrgs()
