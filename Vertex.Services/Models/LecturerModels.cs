@@ -5,6 +5,7 @@ namespace Vertex.Services.Models
 {
     // -- Lecturer Group list item --------------------------------------
     public record LecturerGroupDto(
+        Guid OrgId,
         Guid ProjectId,
         string ProjectName,
         string? ProjectDescription,
@@ -31,7 +32,8 @@ namespace Vertex.Services.Models
         string Priority,
         string? AssigneeName,
         DateOnly StartDate,
-        DateOnly EndDate
+        DateOnly EndDate,
+        string? SubmissionLink
     );
 
     // -- Task Comment DTO ---------------------------------------------
@@ -58,6 +60,7 @@ namespace Vertex.Services.Models
 
     // -- Group detail -------------------------------------------------
     public record LecturerGroupDetailDto(
+        Guid OrgId,
         Guid ProjectId,
         string ProjectName,
         string? ProjectDescription,

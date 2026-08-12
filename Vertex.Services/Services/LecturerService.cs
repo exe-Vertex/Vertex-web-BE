@@ -69,11 +69,13 @@ namespace Vertex.Services.Services
                             t.Priority,
                             t.Assignee?.Name,
                             DateOnly.FromDateTime(t.StartDate),
-                            DateOnly.FromDateTime(t.EndDate)
+                            DateOnly.FromDateTime(t.EndDate),
+                            t.SubmissionLink
                         ))
                         .ToList();
 
                     results.Add(new LecturerGroupDto(
+                        org.Id,
                         project.Id,
                         project.Name,
                         project.Description,
@@ -132,7 +134,8 @@ namespace Vertex.Services.Services
                 t.Priority,
                 t.Assignee?.Name,
                 DateOnly.FromDateTime(t.StartDate),
-                DateOnly.FromDateTime(t.EndDate)
+                DateOnly.FromDateTime(t.EndDate),
+                t.SubmissionLink
             )).ToList();
 
             // Build contribution data
@@ -151,6 +154,7 @@ namespace Vertex.Services.Services
             var orgName = project.Organization?.Name ?? "";
 
             return new LecturerGroupDetailDto(
+                project.OrgId,
                 project.Id,
                 project.Name,
                 project.Description,
