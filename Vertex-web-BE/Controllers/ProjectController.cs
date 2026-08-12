@@ -469,6 +469,28 @@ namespace Vertex_web_BE.Controllers
             }
         }
 
+        [HttpGet("{projectId}/tasks/{taskId}/attachments/{attachmentId}/download-url")]
+        public async Task<IActionResult> GetTaskAttachmentDownloadUrl(Guid orgId, Guid projectId, Guid taskId, Guid attachmentId)
+        {
+            try
+            {
+                await EnsureCanAccessProjectAsync(orgId, projectId);
+                var url = await _fileService.GetTaskAttachmentDownloadUrlAsync(projectId, taskId, attachmentId);
+                return Ok(new { url });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbidden(ex);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
         [HttpDelete("{projectId}/tasks/{taskId}/attachments/{attachmentId}")]
         public async Task<IActionResult> DeleteTaskAttachment(Guid orgId, Guid projectId, Guid taskId, Guid attachmentId, [FromQuery] string role = "Member")
         {

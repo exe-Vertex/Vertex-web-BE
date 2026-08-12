@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Amazon.S3;
+using Amazon.S3.Model;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Vertex.Entities.Projects;
 using Vertex.Repositories;
 using Vertex.Services.Interfaces;
@@ -15,12 +18,20 @@ namespace Vertex.Services.Services
     {
         private readonly AppDbContext _dbContext;
         private readonly IStorageUsageService _storageUsageService;
+        private readonly IAmazonS3 _s3Client;
+        private readonly string? _storageBucketName;
         private readonly string _webRootPath;
 
-        public FileService(AppDbContext dbContext, IStorageUsageService storageUsageService)
+        public FileService(
+            AppDbContext dbContext,
+            IStorageUsageService storageUsageService,
+            IAmazonS3 s3Client,
+            IConfiguration configuration)
         {
             _dbContext = dbContext;
             _storageUsageService = storageUsageService;
+            _s3Client = s3Client;
+            _storageBucketName = configuration["Storage:BucketName"];
             _webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         }
 
@@ -222,16 +233,31 @@ namespace Vertex.Services.Services
 
             await _storageUsageService.EnsureCanStoreAsync(task.Project.OrgId, length);
 
-            var uploadsFolder = Path.Combine(_webRootPath, "uploads", "tasks", taskId.ToString());
-            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
-
             var fileExt = Path.GetExtension(fileName);
             var newFileName = $"{Guid.NewGuid()}{fileExt}";
-            var filePath = Path.Combine(uploadsFolder, newFileName);
+            string storageUrl;
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            if (!string.IsNullOrWhiteSpace(_storageBucketName))
             {
+                var objectKey = $"tasks/{taskId}/{newFileName}";
+                await _s3Client.PutObjectAsync(new PutObjectRequest
+                {
+                    BucketName = _storageBucketName,
+                    Key = objectKey,
+                    InputStream = fileStream,
+                    ContentType = contentType
+                });
+                storageUrl = $"s3://{_storageBucketName}/{objectKey}";
+            }
+            else
+            {
+                var uploadsFolder = Path.Combine(_webRootPath, "uploads", "tasks", taskId.ToString());
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                var filePath = Path.Combine(uploadsFolder, newFileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
                 await fileStream.CopyToAsync(stream);
+                storageUrl = Path.Combine("uploads", "tasks", taskId.ToString(), newFileName).Replace("\\", "/");
             }
 
             var attachment = new TaskAttachment
@@ -240,7 +266,7 @@ namespace Vertex.Services.Services
                 TaskId = taskId,
                 Type = "file",
                 Title = fileName,
-                Url = Path.Combine("uploads", "tasks", taskId.ToString(), newFileName).Replace("\\", "/"),
+                Url = storageUrl,
                 Size = length,
                 MimeType = contentType,
                 UploadedBy = uploaderId,
@@ -256,7 +282,7 @@ namespace Vertex.Services.Services
                 Id: attachment.Id,
                 TaskId: attachment.TaskId,
                 Type: attachment.Type,
-                Url: attachment.Url,
+                Url: attachment.Type == "file" ? null : attachment.Url,
                 Title: attachment.Title,
                 Size: attachment.Size,
                 SizeLabel: FormatSize(attachment.Size ?? 0),
@@ -316,7 +342,7 @@ namespace Vertex.Services.Services
                 Id: a.Id,
                 TaskId: a.TaskId,
                 Type: a.Type,
-                Url: a.Url,
+                Url: a.Type == "file" ? null : a.Url,
                 Title: a.Title,
                 Size: a.Size,
                 SizeLabel: a.Size.HasValue ? FormatSize(a.Size.Value) : null,
@@ -327,6 +353,35 @@ namespace Vertex.Services.Services
             )).ToList();
         }
 
+        public async Task<string> GetTaskAttachmentDownloadUrlAsync(Guid projectId, Guid taskId, Guid attachmentId)
+        {
+            var attachment = await _dbContext.TaskAttachments
+                .Include(a => a.Task)
+                .FirstOrDefaultAsync(a => a.Id == attachmentId && a.TaskId == taskId && a.Task!.ProjectId == projectId);
+            if (attachment == null) throw new Exception("Attachment not found");
+            if (string.IsNullOrWhiteSpace(attachment.Url)) throw new FileNotFoundException("Attachment file is unavailable");
+            if (attachment.Type == "link") return attachment.Url;
+
+            if (TryParseS3Url(attachment.Url, out var bucketName, out var objectKey))
+            {
+                return _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+                {
+                    BucketName = bucketName,
+                    Key = objectKey,
+                    Expires = DateTime.UtcNow.AddMinutes(5),
+                    Verb = HttpVerb.GET
+                });
+            }
+
+            var relativePath = attachment.Url.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString());
+            var localPath = Path.Combine(_webRootPath, relativePath);
+            if (!File.Exists(localPath))
+            {
+                throw new FileNotFoundException("The uploaded file is no longer available. Please upload it again.");
+            }
+
+            return "/" + attachment.Url.TrimStart('/');
+        }
         public async Task DeleteTaskAttachmentAsync(Guid taskId, Guid attachmentId, Guid userId, string userRole)
         {
             var attachment = await _dbContext.TaskAttachments.FirstOrDefaultAsync(a => a.Id == attachmentId && a.TaskId == taskId);
@@ -340,10 +395,14 @@ namespace Vertex.Services.Services
 
             if (attachment.Type == "file" && !string.IsNullOrEmpty(attachment.Url))
             {
-                var filePath = Path.Combine(_webRootPath, attachment.Url.Replace("/", "\\"));
-                if (File.Exists(filePath))
+                if (TryParseS3Url(attachment.Url, out var bucketName, out var objectKey))
                 {
-                    File.Delete(filePath);
+                    await _s3Client.DeleteObjectAsync(bucketName, objectKey);
+                }
+                else
+                {
+                    var filePath = Path.Combine(_webRootPath, attachment.Url.Replace("/", "\\"));
+                    if (File.Exists(filePath)) File.Delete(filePath);
                 }
             }
 
@@ -388,6 +447,17 @@ namespace Vertex.Services.Services
             }
 
             await _dbContext.SaveChangesAsync();
+        }
+
+        private static bool TryParseS3Url(string url, out string bucketName, out string objectKey)
+        {
+            bucketName = string.Empty;
+            objectKey = string.Empty;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "s3") return false;
+
+            bucketName = uri.Host;
+            objectKey = uri.AbsolutePath.TrimStart('/');
+            return !string.IsNullOrWhiteSpace(bucketName) && !string.IsNullOrWhiteSpace(objectKey);
         }
     }
 }

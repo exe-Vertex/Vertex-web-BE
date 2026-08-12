@@ -21,6 +21,7 @@ namespace Vertex.Services.Interfaces
         Task<TaskAttachmentDto> UploadTaskFileAsync(Guid taskId, Guid uploaderId, string fileName, string contentType, long length, Stream fileStream);
         Task<TaskAttachmentDto> AddTaskLinkAsync(Guid taskId, Guid uploaderId, CreateTaskLinkInput input);
         Task<List<TaskAttachmentDto>> GetTaskAttachmentsAsync(Guid taskId);
+        Task<string> GetTaskAttachmentDownloadUrlAsync(Guid projectId, Guid taskId, Guid attachmentId);
         Task DeleteTaskAttachmentAsync(Guid taskId, Guid attachmentId, Guid userId, string userRole);
         Task PromoteTaskAttachmentAsync(Guid taskId, Guid attachmentId, Guid projectId, string userRole);
     }
